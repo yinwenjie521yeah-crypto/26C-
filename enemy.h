@@ -22,6 +22,9 @@ public:
     bool isDead()const;// 判断敌人是否死亡
     bool hasReachedEnd()const;// 判断敌人是否已经到达终点
     QPointF position()const;// 返回敌人当前坐标
+    void takeDamage(int damage);        // 敌人受到伤害
+    int reward()const ;                 // 击败敌人奖励金币
+
 private:
     QVector<QPointF> m_path;// 敌人移动路径
     QPointF m_pos;// 敌人当前坐标

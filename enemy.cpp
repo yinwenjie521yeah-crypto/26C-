@@ -118,3 +118,12 @@ bool Enemy::hasReachedEnd()const{
 QPointF Enemy::position()const{
     return m_pos;
 }
+void Enemy::takeDamage(int damage){
+    m_hp-=damage;
+    if(m_hp<0){
+        m_hp=0;
+    }
+}
+int Enemy::reward()const{
+    return m_reward;
+}

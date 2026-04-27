@@ -6,12 +6,12 @@
 #include <QPainterPath>      // QPainterPath 用来绘制连续路径
 #include <QColor>            // QColor 用来设置颜色
 #include <QTimer>
-
+#include <QtMath>
+#include <QMessageBox>
 // GameWidget 构造函数
 // 当 GameWidget 被创建时，会自动执行这里
 GameWidget::GameWidget(QWidget *parent)
-    : QWidget(parent)        // 调用 QWidget 的构造函数，因为 GameWidget 继承 QWidget
-{
+    : QWidget(parent)       { // 调用 QWidget 的构造函数，因为 GameWidget 继承 QWidget
     setFixedSize(900, 600);  // 设置游戏窗口大小为 900 × 600
 
     initPath();              // 初始化敌人移动路径
@@ -32,6 +32,8 @@ GameWidget::~GameWidget()
 {
     qDeleteAll(m_enemies);   // 删除 m_enemies 里所有 new 出来的 Enemy 对象
     m_enemies.clear();       // 清空敌人数组
+    qDeleteAll(m_towers);      // 删除所有防御塔
+    m_towers.clear();
 }
 
 
@@ -76,19 +78,34 @@ void GameWidget::updateGame()
         m_spawnCounter = 0;  // 计数器清零，重新开始计时
     }
 
-    // 倒着遍历敌人数组
-    // 因为后面可能会删除敌人，倒着遍历更安全
+    // 更新敌人移动
+    for (Enemy* enemy : m_enemies) {
+        enemy->update();
+    }
+
+    // 更新防御塔攻击
+    for (Tower* tower : m_towers) {
+        tower->updateAttack(m_enemies);
+    }
+
+    // 处理到终点或死亡的敌人
     for (int i = m_enemies.size() - 1; i >= 0; --i) {
-        Enemy* enemy = m_enemies[i];  // 取出第 i 个敌人
+        Enemy* enemy = m_enemies[i];
 
-        enemy->update();              // 更新敌人位置，让敌人沿路径移动
-
-        // 如果敌人已经到达终点
         if (enemy->hasReachedEnd()) {
-            m_life--;                 // 玩家生命值减少 1
+            m_life--;
 
-            delete enemy;             // 删除这个敌人对象，释放内存
-            m_enemies.removeAt(i);    // 从敌人数组中移除这个指针
+            delete enemy;
+            m_enemies.removeAt(i);
+            continue;
+        }
+
+        if (enemy->isDead()) {
+            m_gold += enemy->reward();
+
+            delete enemy;
+            m_enemies.removeAt(i);
+            continue;
         }
     }
 
@@ -110,12 +127,19 @@ void GameWidget::paintEvent(QPaintEvent *event)
     drawBackground(painter);           // 画背景
     drawGrid(painter);                 // 画网格
     drawPath(painter);                 // 画道路
-    drawHud(painter);                  // 画顶部状态栏
 
-    // 遍历所有敌人，并把它们画出来
+    // 先画塔
+    for (Tower* tower : m_towers) {
+        tower->draw(painter);
+    }
+
+    // 再画敌人
     for (Enemy* enemy : m_enemies) {
         enemy->draw(painter);
     }
+
+    drawHud(painter);    // 状态栏最后画，保证它在最上层
+
 }
 
 
@@ -236,4 +260,139 @@ void GameWidget::drawHud(QPainter& painter)
 
     // 在状态栏上画文字
     painter.drawText(20, 38, info);
+}
+// 把鼠标点击位置吸附到网格中心
+QPointF GameWidget::snapToGrid(const QPointF& pos) const
+{
+    int gridSize = 60;     // 网格大小
+
+    // 算出当前点击位置属于第几个格子
+    int gridX = static_cast<int>(pos.x()) / gridSize;
+    int gridY = static_cast<int>(pos.y()) / gridSize;
+
+    // 返回这个格子的中心点
+    return QPointF(gridX * gridSize + gridSize / 2,
+                   gridY * gridSize + gridSize / 2);
+}
+
+
+// 计算点 p 到线段 ab 的距离
+// 这个函数用来判断塔是不是太靠近道路
+static double distanceToSegment(const QPointF& p,
+                                const QPointF& a,
+                                const QPointF& b)
+{
+    double vx = b.x() - a.x();      // 线段 ab 的 x 方向
+    double vy = b.y() - a.y();      // 线段 ab 的 y 方向
+
+    double wx = p.x() - a.x();      // 点 p 到点 a 的 x 方向
+    double wy = p.y() - a.y();      // 点 p 到点 a 的 y 方向
+
+    double len2 = vx * vx + vy * vy;    // 线段长度的平方
+
+    if (len2 == 0) {
+        // 如果 a 和 b 是同一个点，就直接计算 p 到 a 的距离
+        double dx = p.x() - a.x();
+        double dy = p.y() - a.y();
+        return qSqrt(dx * dx + dy * dy);
+    }
+
+    // t 表示 p 投影在线段 ab 上的位置比例
+    double t = (wx * vx + wy * vy) / len2;
+
+    // 限制 t 在 0 到 1 之间，保证投影点在线段上
+    if (t < 0) {
+        t = 0;
+    }
+    else if (t > 1) {
+        t = 1;
+    }
+
+    // 计算投影点坐标
+    QPointF projection(a.x() + t * vx,
+                       a.y() + t * vy);
+
+    // 返回 p 到投影点的距离
+    double dx = p.x() - projection.x();
+    double dy = p.y() - projection.y();
+
+    return qSqrt(dx * dx + dy * dy);
+}
+
+
+// 判断某个位置能不能建塔
+bool GameWidget::canBuildTowerAt(const QPointF& pos) const
+{
+    // 不能建在顶部状态栏
+    if (pos.y() < 80) {
+        return false;
+    }
+
+    // 不能建在道路附近
+    // 道路主体宽度大约 34，外边框 42
+    // 这里用 55 做安全距离
+    for (int i = 0; i < m_path.size() - 1; ++i) {
+        double d = distanceToSegment(pos, m_path[i], m_path[i + 1]);
+
+        if (d < 55) {
+            return false;
+        }
+    }
+
+    // 不能和已有防御塔太近
+    for (Tower* tower : m_towers) {
+        double dx = pos.x() - tower->position().x();
+        double dy = pos.y() - tower->position().y();
+        double distance = qSqrt(dx * dx + dy * dy);
+
+        if (distance < 50) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+
+// 鼠标点击事件
+// 玩家点击地图时，会自动调用这个函数
+void GameWidget::mousePressEvent(QMouseEvent *event)
+{
+    // 只处理鼠标左键
+    if (event->button() != Qt::LeftButton) {
+        return;
+    }
+
+    // 获取鼠标点击位置
+    QPointF clickPos = event->position();
+
+    // 把点击位置吸附到网格中心
+    QPointF buildPos = snapToGrid(clickPos);
+
+    // 普通塔价格先固定为 50
+    int towerCost = 50;
+
+    // 金币不足，不能建塔
+    if (m_gold < towerCost) {
+        QMessageBox::information(this, "提示", "金币不足，无法建造防御塔！");
+        return;
+    }
+
+    // 位置不合法，不能建塔
+    if (!canBuildTowerAt(buildPos)) {
+        QMessageBox::information(this, "提示", "这里不能建造防御塔！");
+        return;
+    }
+
+    // 创建防御塔
+    Tower* tower = new Tower(buildPos);
+
+    // 加入防御塔数组
+    m_towers.append(tower);
+
+    // 扣金币
+    m_gold -= towerCost;
+
+    // 刷新画面
+    update();
 }

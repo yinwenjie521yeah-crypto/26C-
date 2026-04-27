@@ -25,6 +25,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         ${PROJECT_SOURCES}
         enemy.h enemy.cpp
         gamewidget.h gamewidget.cpp
+        tower.h tower.cpp
     )
 # Define target properties for Android with Qt 6 as:
 #    set_property(TARGET final APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR

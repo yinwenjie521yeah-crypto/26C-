@@ -340,6 +340,12 @@
 			"MU",
 			"EWIEGA46WW/moc_mainwindow.cpp",
 			null
+		],
+		[
+			"C:/Users/Yin/Desktop/final/tower.h",
+			"MU",
+			"EWIEGA46WW/moc_tower.cpp",
+			null
 		]
 	],
 	"HEADER_EXTENSIONS" : [ "h", "hh", "h++", "hm", "hpp", "hxx", "in", "txx" ],
@@ -416,7 +422,8 @@
 		[ "C:/Users/Yin/Desktop/final/enemy.cpp", "MU", null ],
 		[ "C:/Users/Yin/Desktop/final/gamewidget.cpp", "MU", null ],
 		[ "C:/Users/Yin/Desktop/final/main.cpp", "MU", null ],
-		[ "C:/Users/Yin/Desktop/final/mainwindow.cpp", "MU", null ]
+		[ "C:/Users/Yin/Desktop/final/mainwindow.cpp", "MU", null ],
+		[ "C:/Users/Yin/Desktop/final/tower.cpp", "MU", null ]
 	],
 	"UIC_OPTIONS" : [],
 	"UIC_SEARCH_PATHS" : [],
