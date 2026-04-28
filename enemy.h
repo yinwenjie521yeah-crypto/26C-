@@ -5,7 +5,7 @@
 #include <QPixmap>      // QPixmap 用来保存敌人的图片
 #include <QPainter>     // QPainter 用来绘制敌人
 #include <QString>      // QString 是 Qt 里的字符串类型
-
+#include <QColor>
 class Enemy
 {
 public:
@@ -37,6 +37,8 @@ private:
     QString m_type;
     QPixmap m_icon;
     int m_iconSize=36;
+    QString m_displayName;      // 显示名称，例如 Bug、DDL、Virus、Boss
+    QColor m_color;             // 没有图片时，用不同颜色区分敌人
     //根据敌人类型设置属性
     void setupByType(const QString& type);
 

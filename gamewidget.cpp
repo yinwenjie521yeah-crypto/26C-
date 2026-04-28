@@ -15,7 +15,7 @@ GameWidget::GameWidget(QWidget *parent)
     setFixedSize(900, 600);  // 设置游戏窗口大小为 900 × 600
 
     initPath();              // 初始化敌人移动路径
-
+initSpawnQueue();        // 初始化这一关的出怪顺序
     m_timer = new QTimer(this);  // 创建定时器，this 表示这个定时器属于 GameWidget
 
     // connect 是 Qt 的信号槽机制
@@ -51,31 +51,64 @@ void GameWidget::initPath()
            << QPointF(470, 420)    // 第四个拐点
            << QPointF(800, 420);   // 终点
 }
-
-
-// 生成一个敌人
-void GameWidget::spawnEnemy()
+// 初始化这一关的出怪队列
+void GameWidget::initSpawnQueue()
 {
-    // 创建一个 bug 类型的敌人，并把路径 m_path 传给它
-    Enemy* enemy = new Enemy("bug", m_path);
+    m_spawnQueue.clear();    // 先清空队列
 
-    // 把敌人加入敌人数组，这样它之后就会被更新和绘制
-    m_enemies.append(enemy);
+    // 第一阶段：普通 Bug 怪
+    for (int i = 0; i < 8; ++i) {
+        m_spawnQueue.append("bug");
+    }
+
+    // 第二阶段：加入快速 DDL 怪
+    for (int i = 0; i < 6; ++i) {
+        m_spawnQueue.append("bug");
+    }
+    for (int i = 0; i < 5; ++i) {
+        m_spawnQueue.append("ddl");
+    }
+
+    // 第三阶段：加入厚血 Virus 怪
+    for (int i = 0; i < 6; ++i) {
+        m_spawnQueue.append("virus");
+    }
+
+    // 第四阶段：混合进攻
+    for (int i = 0; i < 6; ++i) {
+        m_spawnQueue.append("bug");
+        m_spawnQueue.append("ddl");
+    }
+
+    // 最后一阶段：Boss
+    m_spawnQueue.append("boss");
+
+    // 总敌人数等于队列长度
+    m_totalEnemies = m_spawnQueue.size();
 }
 
+// 生成敌人
+void GameWidget::spawnEnemy(const QString& type)
+{
+    Enemy* enemy = new Enemy(type, m_path);  // 创建对应类型敌人
+    m_enemies.append(enemy);                 // 加入敌人数组
+}
 
 // 游戏更新函数
 // 这个函数会被 QTimer 每 30ms 调用一次
 void GameWidget::updateGame()
-{
+{   // 如果游戏已经结束，就不再更新
+    if (m_gameFinished) {
+        return;
+    }
     m_spawnCounter++;        // 出怪计数器加 1
+    if (m_spawnedCount < m_spawnQueue.size() && m_spawnCounter >= 30) {
+        QString enemyType = m_spawnQueue[m_spawnedCount];
 
-    // 如果还没生成够敌人，并且计数器达到 45
-    // 30ms × 45 = 1350ms，也就是大约每 1.35 秒生成一个敌人
-    if (m_spawnedCount < m_totalEnemies && m_spawnCounter >= 45) {
-        spawnEnemy();        // 生成一个敌人
-        m_spawnedCount++;    // 已经生成的敌人数 +1
-        m_spawnCounter = 0;  // 计数器清零，重新开始计时
+        spawnEnemy(enemyType);
+
+        m_spawnedCount++;
+        m_spawnCounter = 0;
     }
 
     // 更新敌人移动
@@ -108,7 +141,7 @@ void GameWidget::updateGame()
             continue;
         }
     }
-
+    checkGameResult();    // 检查游戏是否胜利或失败
     update();                         // 通知 Qt 重新绘制窗口，会触发 paintEvent
 }
 
@@ -395,4 +428,41 @@ void GameWidget::mousePressEvent(QMouseEvent *event)
 
     // 刷新画面
     update();
+}
+void GameWidget::checkGameResult()
+{
+    // 如果游戏已经结束，就不重复判断
+    if (m_gameFinished) {
+        return;
+    }
+
+    // 失败条件：生命值小于等于 0
+    if (m_life <= 0) {
+        m_gameFinished = true;       // 标记游戏已经结束
+
+        if (m_timer) {
+            m_timer->stop();         // 停止游戏计时器
+        }
+
+        QMessageBox::information(this,
+                                 "游戏失败",
+                                 "教学楼失守了！请重新开始挑战。");
+        return;
+    }
+
+    // 胜利条件：
+    // 1. 所有敌人都已经生成完
+    // 2. 地图上已经没有敌人
+    if (m_spawnedCount >= m_totalEnemies && m_enemies.isEmpty()) {
+        m_gameFinished = true;       // 标记游戏已经结束
+
+        if (m_timer) {
+            m_timer->stop();         // 停止游戏计时器
+        }
+
+        QMessageBox::information(this,
+                                 "游戏胜利",
+                                 "恭喜你成功保卫了校园！");
+        return;
+    }
 }

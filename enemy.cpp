@@ -16,7 +16,7 @@ void Enemy::setupByType(const QString&type)
     if(type=="bug"){
         m_hp=30;
         m_maxHp=30;
-        m_speed=1.6;
+        m_speed=2.2;
         m_reward=10;
         m_iconSize=36;
         // 尝试加载敌人图标
@@ -27,6 +27,61 @@ void Enemy::setupByType(const QString&type)
                              m_iconSize,
                              Qt::KeepAspectRatio,
                              Qt::SmoothTransformation);
+    }
+    else if (type == "ddl") {
+        m_displayName = "DDL";          // 快速怪
+        m_hp = 20;                      // 血量较低
+        m_maxHp = 20;
+        m_speed = 3.2;                  // 速度快
+        m_reward = 15;
+        m_iconSize = 34;
+        m_color = QColor(240, 150, 50); // 橙色
+
+        m_icon = QPixmap(":/images/enemy_ddl.png")
+                     .scaled(m_iconSize,
+                             m_iconSize,
+                             Qt::KeepAspectRatio,
+                             Qt::SmoothTransformation);
+    }
+    else if (type == "virus") {
+        m_displayName = "Virus";        // 厚血怪
+        m_hp = 90;                      // 血量高
+        m_maxHp = 90;
+        m_speed = 1.4;                  // 速度慢
+        m_reward = 25;
+        m_iconSize = 42;
+        m_color = QColor(130, 80, 200); // 紫色
+
+        m_icon = QPixmap(":/images/enemy_virus.png")
+                     .scaled(m_iconSize,
+                             m_iconSize,
+                             Qt::KeepAspectRatio,
+                             Qt::SmoothTransformation);
+    }
+    else if (type == "boss") {
+        m_displayName = "Boss";         // 最终 Boss
+        m_hp = 350;                     // 超高血量
+        m_maxHp = 350;
+        m_speed = 1.0;                  // 慢速推进
+        m_reward = 100;
+        m_iconSize = 60;
+        m_color = QColor(70, 70, 70);   // 深灰色
+
+        m_icon = QPixmap(":/images/enemy_boss.png")
+                     .scaled(m_iconSize,
+                             m_iconSize,
+                             Qt::KeepAspectRatio,
+                             Qt::SmoothTransformation);
+    }
+    else {
+        // 如果传进来的类型不认识，就默认当作 Bug 怪
+        m_displayName = "Bug";
+        m_hp = 30;
+        m_maxHp = 30;
+        m_speed = 2.2;
+        m_reward = 10;
+        m_iconSize = 36;
+        m_color = QColor(220, 70, 70);
     }
 }
 void Enemy::update(){
@@ -74,7 +129,7 @@ void Enemy::draw(QPainter&painter)const{
     // 如果图片没加载成功，就画一个红色圆形代替
     else {
         painter.setPen(Qt::NoPen);               // 不画边框
-        painter.setBrush(QColor(220, 70, 70));   // 设置填充颜色为红色
+        painter.setBrush(m_color);             // 根据敌人类型使用不同颜色
         painter.drawEllipse(m_pos, half, half);  // 以 m_pos 为圆心画圆
 
         painter.setPen(Qt::white);               // 设置文字颜色为白色
@@ -86,7 +141,7 @@ void Enemy::draw(QPainter&painter)const{
                    m_iconSize,
                    m_iconSize),
             Qt::AlignCenter,
-            "Bug"
+            m_displayName
             );
     }
     // 下面开始画敌人头顶血条
