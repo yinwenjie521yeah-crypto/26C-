@@ -45,7 +45,7 @@ void Enemy::setupByType(const QString&type)
     }
     else if (type == "virus") {
         m_displayName = "Virus";        // 厚血怪
-        m_hp = 90;                      // 血量高
+        m_hp = 60;                      // 血量高
         m_maxHp = 90;
         m_speed = 1.4;                  // 速度慢
         m_reward = 25;
@@ -62,7 +62,7 @@ void Enemy::setupByType(const QString&type)
         m_displayName = "Boss";         // 最终 Boss
         m_hp = 350;                     // 超高血量
         m_maxHp = 350;
-        m_speed = 1.0;                  // 慢速推进
+        m_speed = 1.3;                  // 慢速推进
         m_reward = 100;
         m_iconSize = 60;
         m_color = QColor(70, 70, 70);   // 深灰色

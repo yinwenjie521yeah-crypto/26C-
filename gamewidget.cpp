@@ -12,9 +12,9 @@
 // 当 GameWidget 被创建时，会自动执行这里
 GameWidget::GameWidget(QWidget *parent)
     : QWidget(parent)       { // 调用 QWidget 的构造函数，因为 GameWidget 继承 QWidget
-    setFixedSize(900, 600);  // 设置游戏窗口大小为 900 × 600
+    setFixedSize(1200, 800);  // 设置游戏窗口大小为 900 × 600
 
-    initPath();              // 初始化敌人移动路径
+    initPaths();              // 初始化敌人移动路径
 initSpawnQueue();        // 初始化这一关的出怪顺序
     m_timer = new QTimer(this);  // 创建定时器，this 表示这个定时器属于 GameWidget
 
@@ -38,59 +38,116 @@ GameWidget::~GameWidget()
 
 
 // 初始化敌人移动路径
-void GameWidget::initPath()
+void GameWidget::initPaths()
 {
-    m_path.clear();          // 先清空路径，避免重复添加
+    m_paths.clear();          // 先清空路径，避免重复添加
 
     // 下面这些点组成一条路线
     // 敌人会按照顺序：点1 -> 点2 -> 点3 -> ... -> 终点 移动
-    m_path << QPointF(40, 300)     // 起点
-           << QPointF(220, 300)    // 第一个拐点
-           << QPointF(220, 160)    // 第二个拐点
-           << QPointF(470, 160)    // 第三个拐点
-           << QPointF(470, 420)    // 第四个拐点
-           << QPointF(800, 420);   // 终点
+    // 第一条路径：中间路线
+    QVector<QPointF> path1;
+
+    path1 << QPointF(40, 230)     // 起点 1
+          << QPointF(260, 230)
+          << QPointF(260, 110)
+          << QPointF(620, 110)
+          << QPointF(620, 340)
+          << QPointF(1040, 340);   // 终点
+
+    // 第二条路径：上方绕路
+    QVector<QPointF> path2;
+
+    path2 << QPointF(40,590)     // 起点 2
+          << QPointF(320, 590)
+          << QPointF(320, 720)
+          << QPointF(780, 720)
+          << QPointF(520, 420)
+          << QPointF(780, 500)
+          << QPointF(1040, 500)
+          << QPointF(1040, 340);   // 和第一条路共用终点
+
+    // 把两条路径加入总路径数组
+    m_paths.append(path1);
+    m_paths.append(path2);
 }
 // 初始化这一关的出怪队列
 void GameWidget::initSpawnQueue()
 {
-    m_spawnQueue.clear();    // 先清空队列
+    m_waves.clear();          // 清空原来的波次
+    m_totalEnemies = 0;       // 总敌人数清零
 
-    // 第一阶段：普通 Bug 怪
+    // 第 1 波：教学波，普通 Bug
+    QVector<QString> wave1;
     for (int i = 0; i < 8; ++i) {
-        m_spawnQueue.append("bug");
+        wave1.append("bug");
     }
 
-    // 第二阶段：加入快速 DDL 怪
-    for (int i = 0; i < 6; ++i) {
-        m_spawnQueue.append("bug");
+    // 第 2 波：加入快速 DDL
+    QVector<QString> wave2;
+    for (int i = 0; i < 5; ++i) {
+        wave2.append("bug");
     }
     for (int i = 0; i < 5; ++i) {
-        m_spawnQueue.append("ddl");
+        wave2.append("ddl");
     }
 
-    // 第三阶段：加入厚血 Virus 怪
+    // 第 3 波：厚血 Virus 开始压防线
+    QVector<QString> wave3;
     for (int i = 0; i < 6; ++i) {
-        m_spawnQueue.append("virus");
+        wave3.append("virus");
     }
 
-    // 第四阶段：混合进攻
-    for (int i = 0; i < 6; ++i) {
-        m_spawnQueue.append("bug");
-        m_spawnQueue.append("ddl");
+    // 第 4 波：混合大波
+    QVector<QString> wave4;
+    for (int i = 0; i < 8; ++i) {
+        wave4.append("bug");
+    }
+    for (int i = 0; i < 8; ++i) {
+        wave4.append("ddl");
+    }
+    for (int i = 0; i < 8; ++i) {
+        wave4.append("virus");
     }
 
-    // 最后一阶段：Boss
-    m_spawnQueue.append("boss");
+    // 第 5 波：最终压力波，Boss + 快怪 + 厚血怪
+    QVector<QString> wave5;
+    for (int i = 0; i <10; ++i) {
+        wave5.append("ddl");
+    }
+    for (int i = 0; i <5; ++i) {
+        wave5.append("virus");
+    }
+    wave5.append("boss");
 
-    // 总敌人数等于队列长度
-    m_totalEnemies = m_spawnQueue.size();
+    m_waves.append(wave1);
+    m_waves.append(wave2);
+    m_waves.append(wave3);
+    m_waves.append(wave4);
+    m_waves.append(wave5);
+
+    for (const QVector<QString>& wave : m_waves) {
+        m_totalEnemies += wave.size();
+    }
+
+    m_currentWaveIndex = 0;
+    m_spawnIndexInWave = 0;
+    m_spawnedCount = 0;
+    m_wave = 1;
 }
-
 // 生成敌人
 void GameWidget::spawnEnemy(const QString& type)
 {
-    Enemy* enemy = new Enemy(type, m_path);  // 创建对应类型敌人
+    // 如果没有路径，就不生成敌人，避免程序崩溃
+    if (m_paths.isEmpty()) {
+        return;
+    }
+    int pathIndex = m_spawnedCount % static_cast<int>(m_paths.size());
+
+    // 取出本次敌人要走的路径
+    QVector<QPointF> selectedPath = m_paths[pathIndex];
+
+    // 创建敌人，并把选中的路径传给它
+    Enemy* enemy = new Enemy(type, selectedPath);
     m_enemies.append(enemy);                 // 加入敌人数组
 }
 
@@ -102,15 +159,42 @@ void GameWidget::updateGame()
         return;
     }
     m_spawnCounter++;        // 出怪计数器加 1
-    if (m_spawnedCount < m_spawnQueue.size() && m_spawnCounter >= 30) {
-        QString enemyType = m_spawnQueue[m_spawnedCount];
+    // 多波出怪逻辑
+    if (m_currentWaveIndex < m_waves.size()) {
+        QVector<QString>& currentWave = m_waves[m_currentWaveIndex];
 
-        spawnEnemy(enemyType);
+        // 当前波还没出完
+        if (m_spawnIndexInWave < currentWave.size()) {
+            m_spawnCounter++;
 
-        m_spawnedCount++;
-        m_spawnCounter = 0;
+            // 到达出怪间隔后，生成一个敌人
+            if (m_spawnCounter >= m_spawnInterval) {
+                QString enemyType = currentWave[m_spawnIndexInWave];
+
+                spawnEnemy(enemyType);
+
+                m_spawnIndexInWave++;   // 当前波已生成数量 +1
+                m_spawnedCount++;       // 总生成数量 +1
+                m_spawnCounter = 0;
+            }
+        }
+        // 当前波已经出完，准备进入下一波
+        else {
+            // 如果不是最后一波，就等待一小段时间后进入下一波
+            if (m_currentWaveIndex < m_waves.size() - 1) {
+                m_waveWaitCounter++;
+
+                if (m_waveWaitCounter >= m_waveWaitTime) {
+                    m_currentWaveIndex++;       // 进入下一波
+                    m_wave = m_currentWaveIndex + 1;
+
+                    m_spawnIndexInWave = 0;     // 新一波从第 0 个敌人开始
+                    m_spawnCounter = 0;
+                    m_waveWaitCounter = 0;
+                }
+            }
+        }
     }
-
     // 更新敌人移动
     for (Enemy* enemy : m_enemies) {
         enemy->update();
@@ -208,20 +292,22 @@ void GameWidget::drawGrid(QPainter& painter)
 // 画敌人移动道路
 void GameWidget::drawPath(QPainter& painter)
 {
+    for (int pathIndex = 0; pathIndex < m_paths.size(); ++pathIndex) {
+        const QVector<QPointF>& pathPoints = m_paths[pathIndex];
     // 如果路径点少于 2 个，就不能形成道路
-    if (m_path.size() < 2) {
+    if (pathPoints.size() < 2) {
         return;
     }
 
     QPainterPath path;                 // 创建路径对象
 
-    path.moveTo(m_path[0]);            // 路径从第一个点开始
+    path.moveTo(pathPoints[0]);            // 路径从第一个点开始
 
     // 依次连接后面的路径点
-    for (int i = 1; i < m_path.size(); ++i) {
-        path.lineTo(m_path[i]);
+    for (int i = 1; i < pathPoints.size(); ++i) {
+        path.lineTo(pathPoints[i]);
     }
-
+painter.setBrush(Qt::NoBrush);
     // 先画道路外边框，颜色深一点，线条粗一点
     painter.setPen(QPen(QColor(130, 105, 70),
                         42,
@@ -229,7 +315,7 @@ void GameWidget::drawPath(QPainter& painter)
                         Qt::RoundCap,
                         Qt::RoundJoin));
     painter.drawPath(path);
-
+painter.setBrush(Qt::NoBrush);
     // 再画道路主体，颜色浅一点，线条稍微细一点
     painter.setPen(QPen(QColor(210, 180, 120),
                         34,
@@ -241,11 +327,11 @@ void GameWidget::drawPath(QPainter& painter)
     // 画起点 S
     painter.setPen(Qt::NoPen);                 // 不画边框
     painter.setBrush(QColor(80, 170, 90));     // 绿色填充
-    painter.drawEllipse(m_path.first(), 18, 18);
+    painter.drawEllipse(pathPoints.first(), 18, 18);
 
     painter.setPen(Qt::white);                 // 白色文字
-    painter.drawText(QRectF(m_path.first().x() - 20,
-                            m_path.first().y() - 10,
+    painter.drawText(QRectF(pathPoints.first().x() - 20,
+                            pathPoints.first().y() - 10,
                             40,
                             20),
                      Qt::AlignCenter,
@@ -254,17 +340,35 @@ void GameWidget::drawPath(QPainter& painter)
     // 画终点 E
     painter.setPen(Qt::NoPen);
     painter.setBrush(QColor(200, 80, 80));     // 红色填充
-    painter.drawEllipse(m_path.last(), 18, 18);
+    painter.drawEllipse(pathPoints.last(), 18, 18);
 
     painter.setPen(Qt::white);
-    painter.drawText(QRectF(m_path.last().x() - 20,
-                            m_path.last().y() - 10,
+    // 显示 S1 / S2，表示不同起点
+    QString startText = QString("S%1").arg(pathIndex + 1);
+    painter.drawText(QRectF(pathPoints.last().x() - 20,
+                            pathPoints.last().y() - 10,
                             40,
                             20),
                      Qt::AlignCenter,
-                     "E");
+                     startText);
 }
+    // 所有路径共用终点
+    if (!m_paths.isEmpty() && !m_paths.first().isEmpty()) {
+        QPointF endPoint = m_paths.first().last();
 
+        painter.setPen(Qt::NoPen);
+        painter.setBrush(QColor(200, 80, 80));
+        painter.drawEllipse(endPoint, 18, 18);
+
+        painter.setPen(Qt::white);
+        painter.drawText(QRectF(endPoint.x() - 20,
+                                endPoint.y() - 10,
+                                40,
+                                20),
+                         Qt::AlignCenter,
+                         "E");
+    }
+}
 
 // 画顶部状态栏
 void GameWidget::drawHud(QPainter& painter)
@@ -284,10 +388,11 @@ void GameWidget::drawHud(QPainter& painter)
     painter.setFont(font);
 
     // 拼接状态栏文字
-    QString info = QString("校园保卫战    金币：%1    生命：%2    波次：%3    敌人：%4/%5")
+    QString info = QString("校园保卫战    金币：%1    生命：%2    波次：%3/%4    敌人：%5/%6")
                        .arg(m_gold)
                        .arg(m_life)
                        .arg(m_wave)
+                       .arg(m_waves.size())
                        .arg(m_spawnedCount)
                        .arg(m_totalEnemies);
 
@@ -364,11 +469,14 @@ bool GameWidget::canBuildTowerAt(const QPointF& pos) const
     // 不能建在道路附近
     // 道路主体宽度大约 34，外边框 42
     // 这里用 55 做安全距离
-    for (int i = 0; i < m_path.size() - 1; ++i) {
-        double d = distanceToSegment(pos, m_path[i], m_path[i + 1]);
+    // 不能建在任何一条道路附近
+        for (const QVector<QPointF>& path : m_paths) {
+        for (int i = 0; i < path.size() - 1; ++i) {
+            double d = distanceToSegment(pos, path[i], path[i + 1]);
 
-        if (d < 55) {
-            return false;
+            if (d < 45) {
+                return false;
+            }
         }
     }
 
@@ -378,7 +486,7 @@ bool GameWidget::canBuildTowerAt(const QPointF& pos) const
         double dy = pos.y() - tower->position().y();
         double distance = qSqrt(dx * dx + dy * dy);
 
-        if (distance < 50) {
+        if (distance < 42) {
             return false;
         }
     }

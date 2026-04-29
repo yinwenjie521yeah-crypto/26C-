@@ -15,7 +15,7 @@ MainWindow::MainWindow(QWidget *parent)
     setWindowTitle("校园保卫战：简易塔防");
 
     // 设置主窗口大小
-    resize(900, 600);
+    resize(1200, 800);
 }
 
 MainWindow::~MainWindow()

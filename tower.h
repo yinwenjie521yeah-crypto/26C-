@@ -23,7 +23,7 @@ private:
 
     int m_cost = 50;        // 建造费用
     int m_range = 120;      // 攻击范围，后面攻击敌人会用
-    int m_damage = 10;      // 伤害，后面攻击敌人会用
+    int m_damage =10;      // 伤害，后面攻击敌人会用
 
     int m_size = 36;        // 塔显示大小
     int m_attackInterval = 30;  // 30 帧攻击一次

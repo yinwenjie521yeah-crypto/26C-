@@ -26,7 +26,7 @@ private slots:
 private:
     QTimer* m_timer = nullptr;        // 游戏循环定时器
 
-    QVector<QPointF> m_path;          // 敌人路线
+   QVector<QVector<QPointF>> m_paths; // 多条敌人路线
     QVector<Enemy*> m_enemies;        // 敌人数组
 
     int m_gold = 150;                 // 金币
@@ -36,13 +36,18 @@ private:
     int m_spawnCounter = 0;           // 出怪计数器
     int m_spawnedCount = 0;           // 已生成敌人数
     int m_totalEnemies = 20;           // 总敌人数
-    QVector<QString> m_spawnQueue;
+   QVector<QVector<QString>> m_waves;  // 多波敌人，每一波是一个 QString 队列
 
     bool m_gameFinished = false;     // 游戏是否已经结束
+   int m_currentWaveIndex = 0;     // 当前第几波，0 表示第一波
+   int m_spawnIndexInWave = 0;     // 当前波已经生成到第几个敌人
+   int m_spawnInterval = 25;       // 出怪间隔，数值越小，出怪越快
 
+   int m_waveWaitCounter = 0;      // 波次间隔计数器
+   int m_waveWaitTime = 90;        // 每波之间等待 90 帧，约 2.7 秒
     QVector<Tower*> m_towers;        // 当前地图上的所有防御塔
 private:
-    void initPath();                  // 初始化路径
+    void initPaths();                  // 初始化路径
     void initSpawnQueue();              // 初始化出怪队列
     void spawnEnemy(const QString& type); // 按类型生成敌人
     void drawBackground(QPainter& painter);  // 画背景
