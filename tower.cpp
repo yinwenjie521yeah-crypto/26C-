@@ -1,6 +1,6 @@
 #include "tower.h"
 #include "enemy.h"
-
+#include "bullet.h"
 #include <QtMath>
 // Tower 构造函数
 Tower::Tower(const QPointF& pos)
@@ -9,7 +9,7 @@ Tower::Tower(const QPointF& pos)
 }
 
 // 每一帧更新塔的攻击逻辑
-void Tower::updateAttack(QVector<Enemy*>& enemies)
+void Tower::updateAttack(QVector<Enemy*>& enemies, QVector<Bullet*>& bullets)
 {
     m_attackCounter++;  // 攻击计数器每帧 +1
 
@@ -21,7 +21,7 @@ void Tower::updateAttack(QVector<Enemy*>& enemies)
     // 到了攻击时间，重置计数器
     m_attackCounter = 0;
 
-    // 遍历敌人，找第一个在范围内的敌人
+    // 遍历敌人，找第一个在攻击范围内的敌人
     for (Enemy* enemy : enemies) {
         if (enemy->isDead()) {
             continue;
@@ -32,8 +32,14 @@ void Tower::updateAttack(QVector<Enemy*>& enemies)
         }
 
         if (isEnemyInRange(enemy)) {
-            enemy->takeDamage(m_damage);  // 扣敌人血
-            return;                       // 当前版本一次只打一个敌人
+            // 不再直接扣血，而是生成一颗子弹
+            Bullet* bullet = new Bullet(m_pos, enemy, m_damage);
+
+            // 把子弹加入子弹数组
+            bullets.append(bullet);
+
+            // 当前版本一次只攻击一个敌人
+            return;
         }
     }
 }

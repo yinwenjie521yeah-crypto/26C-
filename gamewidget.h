@@ -9,7 +9,7 @@
 #include <QMouseEvent>   // 鼠标事件
 #include "tower.h"       // 引入防御塔类
 #include <QString>
-
+#include "bullet.h"
 class GameWidget:public QWidget
 {Q_OBJECT
 public:
@@ -37,14 +37,14 @@ private:
     int m_spawnedCount = 0;           // 已生成敌人数
     int m_totalEnemies = 20;           // 总敌人数
    QVector<QVector<QString>> m_waves;  // 多波敌人，每一波是一个 QString 队列
-
+   QVector<Bullet*> m_bullets;      // 当前地图上的所有子弹
     bool m_gameFinished = false;     // 游戏是否已经结束
    int m_currentWaveIndex = 0;     // 当前第几波，0 表示第一波
    int m_spawnIndexInWave = 0;     // 当前波已经生成到第几个敌人
-   int m_spawnInterval = 25;       // 出怪间隔，数值越小，出怪越快
+   int m_spawnInterval = 35;       // 出怪间隔，数值越小，出怪越快
 
    int m_waveWaitCounter = 0;      // 波次间隔计数器
-   int m_waveWaitTime = 90;        // 每波之间等待 90 帧，约 2.7 秒
+   int m_waveWaitTime =120;        // 每波之间等待 90 帧，约 2.7 秒
     QVector<Tower*> m_towers;        // 当前地图上的所有防御塔
 private:
     void initPaths();                  // 初始化路径
@@ -57,6 +57,7 @@ private:
     QPointF snapToGrid(const QPointF& pos) const;       // 把点击位置吸附到格子中心
     bool canBuildTowerAt(const QPointF& pos) const;     // 判断这个位置能不能建塔
     void checkGameResult();           // 检查胜利或失败
+    void removeBulletsTargeting(Enemy* enemy);  // 删除所有瞄准某个敌人的子弹
 };
 
 #endif // GAMEWIDGET_H

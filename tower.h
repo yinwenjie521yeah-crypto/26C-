@@ -4,7 +4,7 @@
 #include <QPainter>
 #include <QColor>
 #include <QVector>
-
+class Bullet;
 class Enemy;
 class Tower
 {
@@ -16,7 +16,7 @@ public:
 
     // 获取塔的建造价格
     int cost() const;
-    void updateAttack(QVector<Enemy*>& enemies);  // 自动攻击敌人
+    void updateAttack(QVector<Enemy*>& enemies, QVector<Bullet*>& bullets);  // 自动攻击敌人
 
 private:
     QPointF m_pos;          // 塔的位置

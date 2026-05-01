@@ -34,6 +34,8 @@ GameWidget::~GameWidget()
     m_enemies.clear();       // 清空敌人数组
     qDeleteAll(m_towers);      // 删除所有防御塔
     m_towers.clear();
+    qDeleteAll(m_bullets);
+    m_bullets.clear();
 }
 
 
@@ -78,46 +80,54 @@ void GameWidget::initSpawnQueue()
 
     // 第 1 波：教学波，普通 Bug
     QVector<QString> wave1;
-    for (int i = 0; i < 8; ++i) {
+    for (int i = 0; i <6; ++i) {
         wave1.append("bug");
     }
 
     // 第 2 波：加入快速 DDL
     QVector<QString> wave2;
-    for (int i = 0; i < 5; ++i) {
+    for (int i = 0; i < 7; ++i) {
         wave2.append("bug");
     }
-    for (int i = 0; i < 5; ++i) {
+    for (int i = 0; i < 3; ++i) {
         wave2.append("ddl");
     }
 
-    // 第 3 波：厚血 Virus 开始压防线
     QVector<QString> wave3;
     for (int i = 0; i < 6; ++i) {
-        wave3.append("virus");
+        wave3.append("bug");
+    }
+    for (int i = 0; i < 6; ++i) {
+        wave3.append("ddl");
     }
 
-    // 第 4 波：混合大波
+    // 第 4 波：加入厚血怪
     QVector<QString> wave4;
-    for (int i = 0; i < 8; ++i) {
+    for (int i = 0; i < 6; ++i) {
         wave4.append("bug");
     }
-    for (int i = 0; i < 8; ++i) {
-        wave4.append("ddl");
-    }
-    for (int i = 0; i < 8; ++i) {
+    for (int i = 0; i < 5; ++i) {
         wave4.append("virus");
     }
 
-    // 第 5 波：最终压力波，Boss + 快怪 + 厚血怪
+    // 第 5 波：混合进攻
     QVector<QString> wave5;
-    for (int i = 0; i <10; ++i) {
+    for (int i = 0; i < 6; ++i) {
         wave5.append("ddl");
     }
-    for (int i = 0; i <5; ++i) {
+    for (int i = 0; i < 6; ++i) {
         wave5.append("virus");
     }
-    wave5.append("boss");
+
+    // 第 6 波：最终 Boss 波
+    QVector<QString> wave6;
+    for (int i = 0; i < 5; ++i) {
+        wave6.append("ddl");
+    }
+    for (int i = 0; i < 4; ++i) {
+        wave6.append("virus");
+    }
+    wave6.append("boss");
 
     m_waves.append(wave1);
     m_waves.append(wave2);
@@ -166,7 +176,10 @@ void GameWidget::updateGame()
         // 当前波还没出完
         if (m_spawnIndexInWave < currentWave.size()) {
             m_spawnCounter++;
-
+int currentInterval = m_spawnInterval - m_currentWaveIndex * 2;
+            if (currentInterval < 22) {
+                currentInterval = 22;
+            }
             // 到达出怪间隔后，生成一个敌人
             if (m_spawnCounter >= m_spawnInterval) {
                 QString enemyType = currentWave[m_spawnIndexInWave];
@@ -180,6 +193,9 @@ void GameWidget::updateGame()
         }
         // 当前波已经出完，准备进入下一波
         else {
+            // 关键改动：
+            // 必须等当前地图上的敌人全部被清掉，才进入下一波
+            if (m_enemies.isEmpty()) {
             // 如果不是最后一波，就等待一小段时间后进入下一波
             if (m_currentWaveIndex < m_waves.size() - 1) {
                 m_waveWaitCounter++;
@@ -195,14 +211,28 @@ void GameWidget::updateGame()
             }
         }
     }
+}
+
     // 更新敌人移动
     for (Enemy* enemy : m_enemies) {
         enemy->update();
     }
 
-    // 更新防御塔攻击
+    // 更新所有防御塔攻击，防御塔会生成子弹
     for (Tower* tower : m_towers) {
-        tower->updateAttack(m_enemies);
+        tower->updateAttack(m_enemies, m_bullets);
+    }
+    // 更新所有子弹
+    for (Bullet* bullet : m_bullets) {
+        bullet->update();
+    }
+
+    // 删除已经命中或失效的子弹
+    for (int i = m_bullets.size() - 1; i >= 0; --i) {
+        if (m_bullets[i]->isFinished()) {
+            delete m_bullets[i];
+            m_bullets.removeAt(i);
+        }
     }
 
     // 处理到终点或死亡的敌人
@@ -211,7 +241,7 @@ void GameWidget::updateGame()
 
         if (enemy->hasReachedEnd()) {
             m_life--;
-
+removeBulletsTargeting(enemy);  // 删除所有瞄准这个敌人的子弹
             delete enemy;
             m_enemies.removeAt(i);
             continue;
@@ -219,7 +249,7 @@ void GameWidget::updateGame()
 
         if (enemy->isDead()) {
             m_gold += enemy->reward();
-
+removeBulletsTargeting(enemy);  // 删除所有瞄准这个敌人的子弹
             delete enemy;
             m_enemies.removeAt(i);
             continue;
@@ -255,7 +285,13 @@ void GameWidget::paintEvent(QPaintEvent *event)
         enemy->draw(painter);
     }
 
-    drawHud(painter);    // 状态栏最后画，保证它在最上层
+    // 再画子弹，让子弹显示在敌人和道路上方
+    for (Bullet* bullet : m_bullets) {
+        bullet->draw(painter);
+    }
+
+    // 状态栏最后画，保证在最上层
+    drawHud(painter);
 
 }
 
@@ -572,5 +608,14 @@ void GameWidget::checkGameResult()
                                  "游戏胜利",
                                  "恭喜你成功保卫了校园！");
         return;
+    }
+}
+void GameWidget::removeBulletsTargeting(Enemy* enemy)
+{
+    for (int i = m_bullets.size() - 1; i >= 0; --i) {
+        if (m_bullets[i]->target() == enemy) {
+            delete m_bullets[i];
+            m_bullets.removeAt(i);
+        }
     }
 }
