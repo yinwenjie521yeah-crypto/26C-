@@ -1,13 +1,44 @@
 #include "tower.h"
 #include "enemy.h"
 #include "bullet.h"
+#include <QPen>
+#include <QFont>
 #include <QtMath>
 // Tower 构造函数
-Tower::Tower(const QPointF& pos)
-    : m_pos(pos)        // 把传进来的位置保存到 m_pos
-{
+Tower::Tower(const QPointF& pos, TowerType type)
+    : m_pos(pos),m_type(type)        // 把传进来的位置保存到 m_pos
+{setupByType(type);   // 根据塔类型设置不同属性
 }
-
+void Tower::setupByType(TowerType type)
+{
+    if (type == TowerType::Normal) {
+        m_cost = 50;                 // 价格便宜
+        m_range = 120;               // 范围中等
+        m_damage = 18;               // 伤害中等
+        m_attackInterval = 25;       // 攻速中等
+        m_size = 36;
+        m_bodyColor = QColor(80, 140, 230);
+        m_text = "N";                // Normal
+    }
+    else if (type == TowerType::Fast) {
+        m_cost = 80;                 // 稍贵
+        m_range = 110;               // 范围略小
+        m_damage = 10;               // 单次伤害低
+        m_attackInterval = 10;       // 攻击很快，适合打 DDL 快怪
+        m_size = 34;
+        m_bodyColor = QColor(80, 200, 120);
+        m_text = "F";                // Fast
+    }
+    else if (type == TowerType::Heavy) {
+        m_cost = 120;                // 最贵
+        m_range = 165;               // 范围大
+        m_damage = 45;               // 伤害高，适合打 Virus 和 Boss
+        m_attackInterval = 55;       // 攻击慢
+        m_size = 44;
+        m_bodyColor = QColor(220, 120, 60);
+        m_text = "H";                // Heavy
+    }
+}
 // 每一帧更新塔的攻击逻辑
 void Tower::updateAttack(QVector<Enemy*>& enemies, QVector<Bullet*>& bullets)
 {
@@ -32,17 +63,13 @@ void Tower::updateAttack(QVector<Enemy*>& enemies, QVector<Bullet*>& bullets)
         }
 
         if (isEnemyInRange(enemy)) {
-            // 不再直接扣血，而是生成一颗子弹
             Bullet* bullet = new Bullet(m_pos, enemy, m_damage);
-
-            // 把子弹加入子弹数组
             bullets.append(bullet);
-
-            // 当前版本一次只攻击一个敌人
             return;
         }
     }
 }
+
 
 
 // 判断敌人是否在攻击范围内
@@ -63,27 +90,19 @@ void Tower::draw(QPainter& painter) const
 {
     int half = m_size / 2;   // 塔大小的一半，用来让塔居中绘制
 
-    // 画塔的攻击范围
-    // 先画范围圈，后面做攻击时会更直观
-    painter.setPen(QPen(QColor(80, 120, 220, 80), 2, Qt::DashLine));
-    painter.setBrush(Qt::NoBrush);
-    painter.drawEllipse(m_pos, m_range, m_range);
-
-    // 画塔的主体
-    painter.setPen(QPen(QColor(30, 80, 160), 3));
-    painter.setBrush(QColor(80, 140, 230));
+    painter.setPen(QPen(QColor(40, 60, 90), 3));
+    painter.setBrush(m_bodyColor);
     painter.drawEllipse(m_pos, half, half);
 
-    // 画塔中间的小圆
     painter.setPen(Qt::NoPen);
-    painter.setBrush(QColor(230, 240, 255));
-    painter.drawEllipse(m_pos, 8, 8);
+    painter.setBrush(QColor(240, 245, 255));
+    painter.drawEllipse(m_pos, 9, 9);
 
-    // 写一个 T，表示 Tower
-    painter.setPen(QColor(20, 50, 120));
+    painter.setPen(QColor(20, 40, 80));
+
     QFont font = painter.font();
     font.setBold(true);
-    font.setPointSize(11);
+    font.setPointSize(12);
     painter.setFont(font);
 
     painter.drawText(QRectF(m_pos.x() - half,
@@ -91,7 +110,7 @@ void Tower::draw(QPainter& painter) const
                             m_size,
                             m_size),
                      Qt::AlignCenter,
-                     "T");
+                    m_text);
 }
 
 
@@ -106,4 +125,43 @@ QPointF Tower::position() const
 int Tower::cost() const
 {
     return m_cost;
+}
+// 返回塔类型
+TowerType Tower::type() const
+{
+    return m_type;
+}
+
+
+// 根据类型返回价格
+int Tower::costForType(TowerType type)
+{
+    if (type == TowerType::Normal) {
+        return 50;
+    }
+    else if (type == TowerType::Fast) {
+        return 80;
+    }
+    else if (type == TowerType::Heavy) {
+        return 120;
+    }
+
+    return 50;
+}
+
+
+// 根据类型返回名字
+QString Tower::nameForType(TowerType type)
+{
+    if (type == TowerType::Normal) {
+        return "普通塔";
+    }
+    else if (type == TowerType::Fast) {
+        return "速射塔";
+    }
+    else if (type == TowerType::Heavy) {
+        return "重炮塔";
+    }
+
+    return "普通塔";
 }

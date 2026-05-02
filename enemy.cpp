@@ -14,9 +14,9 @@ Enemy::Enemy(const QString& type, const QVector<QPointF>& path):m_path(path),m_t
 void Enemy::setupByType(const QString&type)
 {
     if(type=="bug"){
-        m_hp=30;
-        m_maxHp=30;
-        m_speed=2.2;
+        m_hp=40;
+        m_maxHp=40;
+        m_speed=2.4;
         m_reward=10;
         m_iconSize=36;
         // 尝试加载敌人图标
@@ -30,9 +30,9 @@ void Enemy::setupByType(const QString&type)
     }
     else if (type == "ddl") {
         m_displayName = "DDL";          // 快速怪
-        m_hp = 20;                      // 血量较低
-        m_maxHp = 20;
-        m_speed = 3.2;                  // 速度快
+        m_hp = 28;                      // 血量较低
+        m_maxHp = 28;
+        m_speed = 3.6;                  // 速度快
         m_reward = 15;
         m_iconSize = 34;
         m_color = QColor(240, 150, 50); // 橙色
@@ -45,9 +45,9 @@ void Enemy::setupByType(const QString&type)
     }
     else if (type == "virus") {
         m_displayName = "Virus";        // 厚血怪
-        m_hp = 60;                      // 血量高
-        m_maxHp = 90;
-        m_speed = 1.4;                  // 速度慢
+        m_hp =130;                      // 血量高
+        m_maxHp = 130;
+        m_speed = 2.0;                  // 速度慢
         m_reward = 25;
         m_iconSize = 42;
         m_color = QColor(130, 80, 200); // 紫色
@@ -60,9 +60,9 @@ void Enemy::setupByType(const QString&type)
     }
     else if (type == "boss") {
         m_displayName = "Boss";         // 最终 Boss
-        m_hp = 350;                     // 超高血量
-        m_maxHp = 350;
-        m_speed = 1.3;                  // 慢速推进
+        m_hp = 550;                     // 超高血量
+        m_maxHp = 550;
+        m_speed = 1.35;                  // 慢速推进
         m_reward = 100;
         m_iconSize = 60;
         m_color = QColor(70, 70, 70);   // 深灰色

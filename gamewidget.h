@@ -1,7 +1,7 @@
 #ifndef GAMEWIDGET_H
 #define GAMEWIDGET_H
 #include <QWidget>
-#include <QTime>
+#include <QTimer>
 #include <QVector>
 #include <QPointF>
 #include <QPainter>
@@ -10,6 +10,7 @@
 #include "tower.h"       // 引入防御塔类
 #include <QString>
 #include "bullet.h"
+#include <QKeyEvent>
 class GameWidget:public QWidget
 {Q_OBJECT
 public:
@@ -19,7 +20,7 @@ public:
 protected:
     void paintEvent(QPaintEvent *event) override;     // 绘图函数
     void mousePressEvent(QMouseEvent *event) override;  // 鼠标点击事件
-
+void keyPressEvent(QKeyEvent *event) override;
 private slots:
     void updateGame();                                // 游戏更新函数
 
@@ -41,11 +42,12 @@ private:
     bool m_gameFinished = false;     // 游戏是否已经结束
    int m_currentWaveIndex = 0;     // 当前第几波，0 表示第一波
    int m_spawnIndexInWave = 0;     // 当前波已经生成到第几个敌人
-   int m_spawnInterval = 35;       // 出怪间隔，数值越小，出怪越快
-
+   int m_spawnInterval = 18;       // 出怪间隔，数值越小，出怪越快
+int m_nextPathIndex = 0;        // 下一个敌人从哪条路出来
    int m_waveWaitCounter = 0;      // 波次间隔计数器
-   int m_waveWaitTime =120;        // 每波之间等待 90 帧，约 2.7 秒
+   int m_waveWaitTime =20;        // 每波之间等待 120 帧
     QVector<Tower*> m_towers;        // 当前地图上的所有防御塔
+   TowerType m_selectedTowerType = TowerType::Normal;
 private:
     void initPaths();                  // 初始化路径
     void initSpawnQueue();              // 初始化出怪队列

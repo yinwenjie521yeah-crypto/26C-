@@ -13,7 +13,7 @@
 GameWidget::GameWidget(QWidget *parent)
     : QWidget(parent)       { // 调用 QWidget 的构造函数，因为 GameWidget 继承 QWidget
     setFixedSize(1200, 800);  // 设置游戏窗口大小为 900 × 600
-
+setFocusPolicy(Qt::StrongFocus);
     initPaths();              // 初始化敌人移动路径
 initSpawnQueue();        // 初始化这一关的出怪顺序
     m_timer = new QTimer(this);  // 创建定时器，this 表示这个定时器属于 GameWidget
@@ -80,24 +80,24 @@ void GameWidget::initSpawnQueue()
 
     // 第 1 波：教学波，普通 Bug
     QVector<QString> wave1;
-    for (int i = 0; i <6; ++i) {
+    for (int i = 0; i <8; ++i) {
         wave1.append("bug");
     }
 
     // 第 2 波：加入快速 DDL
     QVector<QString> wave2;
-    for (int i = 0; i < 7; ++i) {
+    for (int i = 0; i < 8; ++i) {
         wave2.append("bug");
     }
-    for (int i = 0; i < 3; ++i) {
+    for (int i = 0; i <6; ++i) {
         wave2.append("ddl");
     }
 
     QVector<QString> wave3;
-    for (int i = 0; i < 6; ++i) {
+    for (int i = 0; i < 8; ++i) {
         wave3.append("bug");
     }
-    for (int i = 0; i < 6; ++i) {
+    for (int i = 0; i <10; ++i) {
         wave3.append("ddl");
     }
 
@@ -106,25 +106,25 @@ void GameWidget::initSpawnQueue()
     for (int i = 0; i < 6; ++i) {
         wave4.append("bug");
     }
-    for (int i = 0; i < 5; ++i) {
+    for (int i = 0; i <10; ++i) {
         wave4.append("virus");
     }
 
     // 第 5 波：混合进攻
     QVector<QString> wave5;
-    for (int i = 0; i < 6; ++i) {
+    for (int i = 0; i < 10; ++i) {
         wave5.append("ddl");
     }
-    for (int i = 0; i < 6; ++i) {
+    for (int i = 0; i < 10; ++i) {
         wave5.append("virus");
     }
 
     // 第 6 波：最终 Boss 波
     QVector<QString> wave6;
-    for (int i = 0; i < 5; ++i) {
+    for (int i = 0; i <10; ++i) {
         wave6.append("ddl");
     }
-    for (int i = 0; i < 4; ++i) {
+    for (int i = 0; i < 10; ++i) {
         wave6.append("virus");
     }
     wave6.append("boss");
@@ -134,6 +134,7 @@ void GameWidget::initSpawnQueue()
     m_waves.append(wave3);
     m_waves.append(wave4);
     m_waves.append(wave5);
+    m_waves.append(wave6);
 
     for (const QVector<QString>& wave : m_waves) {
         m_totalEnemies += wave.size();
@@ -151,8 +152,8 @@ void GameWidget::spawnEnemy(const QString& type)
     if (m_paths.isEmpty()) {
         return;
     }
-    int pathIndex = m_spawnedCount % static_cast<int>(m_paths.size());
-
+    int pathIndex = m_nextPathIndex % static_cast<int>(m_paths.size());
+    m_nextPathIndex++;
     // 取出本次敌人要走的路径
     QVector<QPointF> selectedPath = m_paths[pathIndex];
 
@@ -168,7 +169,6 @@ void GameWidget::updateGame()
     if (m_gameFinished) {
         return;
     }
-    m_spawnCounter++;        // 出怪计数器加 1
     // 多波出怪逻辑
     if (m_currentWaveIndex < m_waves.size()) {
         QVector<QString>& currentWave = m_waves[m_currentWaveIndex];
@@ -177,25 +177,40 @@ void GameWidget::updateGame()
         if (m_spawnIndexInWave < currentWave.size()) {
             m_spawnCounter++;
 int currentInterval = m_spawnInterval - m_currentWaveIndex * 2;
-            if (currentInterval < 22) {
-                currentInterval = 22;
+            if (currentInterval < 10) {
+                currentInterval = 10;
             }
             // 到达出怪间隔后，生成一个敌人
-            if (m_spawnCounter >= m_spawnInterval) {
-                QString enemyType = currentWave[m_spawnIndexInWave];
+            if (m_spawnCounter >= currentInterval) {
+                int spawnCountThisTime = 1;
 
-                spawnEnemy(enemyType);
+                // 第 3 波开始，每次出 2 个
+                if (m_currentWaveIndex >= 2) {
+                    spawnCountThisTime = 2;
+                }
 
-                m_spawnIndexInWave++;   // 当前波已生成数量 +1
-                m_spawnedCount++;       // 总生成数量 +1
+                // 第 5 波开始，每次出 3 个
+                if (m_currentWaveIndex >= 4) {
+                    spawnCountThisTime = 3;
+                }
+
+                for (int i = 0; i < spawnCountThisTime && m_spawnIndexInWave < currentWave.size(); ++i) {
+                    QString enemyType = currentWave[m_spawnIndexInWave];
+
+                    spawnEnemy(enemyType);
+
+                    m_spawnIndexInWave++;
+                    m_spawnedCount++;
+                }
+
                 m_spawnCounter = 0;
-            }
-        }
+            }}
+
         // 当前波已经出完，准备进入下一波
         else {
             // 关键改动：
             // 必须等当前地图上的敌人全部被清掉，才进入下一波
-            if (m_enemies.isEmpty()) {
+            if (m_enemies.size() <= 6) {
             // 如果不是最后一波，就等待一小段时间后进入下一波
             if (m_currentWaveIndex < m_waves.size() - 1) {
                 m_waveWaitCounter++;
@@ -375,12 +390,10 @@ painter.setBrush(Qt::NoBrush);
 
     // 画终点 E
     painter.setPen(Qt::NoPen);
-    painter.setBrush(QColor(200, 80, 80));     // 红色填充
-    painter.drawEllipse(pathPoints.last(), 18, 18);
 
-    painter.setPen(Qt::white);
     // 显示 S1 / S2，表示不同起点
     QString startText = QString("S%1").arg(pathIndex + 1);
+    painter.setPen(Qt::white);
     painter.drawText(QRectF(pathPoints.last().x() - 20,
                             pathPoints.last().y() - 10,
                             40,
@@ -423,14 +436,14 @@ void GameWidget::drawHud(QPainter& painter)
     font.setBold(true);
     painter.setFont(font);
 
-    // 拼接状态栏文字
-    QString info = QString("校园保卫战    金币：%1    生命：%2    波次：%3/%4    敌人：%5/%6")
+    QString info = QString("校园保卫战    金币：%1    生命：%2    波次：%3/%4    敌人：%5/%6    当前塔：%7")
                        .arg(m_gold)
                        .arg(m_life)
                        .arg(m_wave)
                        .arg(m_waves.size())
                        .arg(m_spawnedCount)
-                       .arg(m_totalEnemies);
+                       .arg(m_totalEnemies)
+                       .arg(Tower::nameForType(m_selectedTowerType));
 
     // 在状态栏上画文字
     painter.drawText(20, 38, info);
@@ -535,6 +548,7 @@ bool GameWidget::canBuildTowerAt(const QPointF& pos) const
 // 玩家点击地图时，会自动调用这个函数
 void GameWidget::mousePressEvent(QMouseEvent *event)
 {
+    setFocus();
     // 只处理鼠标左键
     if (event->button() != Qt::LeftButton) {
         return;
@@ -546,8 +560,7 @@ void GameWidget::mousePressEvent(QMouseEvent *event)
     // 把点击位置吸附到网格中心
     QPointF buildPos = snapToGrid(clickPos);
 
-    // 普通塔价格先固定为 50
-    int towerCost = 50;
+    int towerCost = Tower::costForType(m_selectedTowerType);
 
     // 金币不足，不能建塔
     if (m_gold < towerCost) {
@@ -562,7 +575,7 @@ void GameWidget::mousePressEvent(QMouseEvent *event)
     }
 
     // 创建防御塔
-    Tower* tower = new Tower(buildPos);
+    Tower* tower = new Tower(buildPos, m_selectedTowerType);
 
     // 加入防御塔数组
     m_towers.append(tower);
@@ -617,5 +630,20 @@ void GameWidget::removeBulletsTargeting(Enemy* enemy)
             delete m_bullets[i];
             m_bullets.removeAt(i);
         }
+    }
+}
+void GameWidget::keyPressEvent(QKeyEvent *event)
+{
+    if (event->key() == Qt::Key_1) {
+        m_selectedTowerType = TowerType::Normal;
+        update();
+    }
+    else if (event->key() == Qt::Key_2) {
+        m_selectedTowerType = TowerType::Fast;
+        update();
+    }
+    else if (event->key() == Qt::Key_3) {
+        m_selectedTowerType = TowerType::Heavy;
+        update();
     }
 }
