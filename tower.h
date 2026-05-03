@@ -26,7 +26,20 @@ public:
    void updateAttack(QVector<Enemy*>& enemies, QVector<Bullet*>& bullets);
     // 返回塔的类型
     TowerType type() const;
+   int level() const;                  // 返回等级
+   int damage() const;                 // 返回伤害
+   int range() const;                  // 返回范围
 
+   int upgradeCost() const;            // 升级费用
+   int sellValue() const;              // 出售返还金币
+
+   bool canUpgrade() const;            // 是否还能升级
+   bool upgrade();                     // 执行升级
+
+   bool containsPoint(const QPointF& pos) const;  // 判断鼠标是否点中塔
+
+   void setSelected(bool selected);    // 设置是否选中
+   bool isSelected() const;            // 是否被选中
     // 根据塔类型返回价格
     static int costForType(TowerType type);
 
@@ -41,6 +54,10 @@ TowerType m_type;           // 塔的类型
     int m_damage =18;      // 伤害，后面攻击敌人会用
 
     int m_size = 36;        // 塔显示大小
+    int m_level = 1;          // 塔等级
+    int m_maxLevel = 3;       // 最大等级
+    int m_totalCost = 50;     // 总花费，用来计算出售返还
+    bool m_selected = false;  // 是否被选中
     int m_attackInterval = 25;  // 25帧攻击一次
     int m_attackCounter = 0;
     QColor m_bodyColor;         // 塔的颜色

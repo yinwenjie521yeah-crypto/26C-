@@ -38,6 +38,8 @@ void Tower::setupByType(TowerType type)
         m_bodyColor = QColor(220, 120, 60);
         m_text = "H";                // Heavy
     }
+    m_totalCost = m_cost;
+
 }
 // 每一帧更新塔的攻击逻辑
 void Tower::updateAttack(QVector<Enemy*>& enemies, QVector<Bullet*>& bullets)
@@ -89,7 +91,12 @@ bool Tower::isEnemyInRange(Enemy* enemy) const
 void Tower::draw(QPainter& painter) const
 {
     int half = m_size / 2;   // 塔大小的一半，用来让塔居中绘制
-
+    // 如果塔被选中，显示攻击范围
+    if (m_selected) {
+        painter.setPen(QPen(QColor(255, 200, 60, 150), 2, Qt::DashLine));
+        painter.setBrush(Qt::NoBrush);
+        painter.drawEllipse(m_pos, m_range, m_range);
+    }
     painter.setPen(QPen(QColor(40, 60, 90), 3));
     painter.setBrush(m_bodyColor);
     painter.drawEllipse(m_pos, half, half);
@@ -104,13 +111,13 @@ void Tower::draw(QPainter& painter) const
     font.setBold(true);
     font.setPointSize(12);
     painter.setFont(font);
-
+QString text = m_text + QString::number(m_level);
     painter.drawText(QRectF(m_pos.x() - half,
                             m_pos.y() - half,
                             m_size,
                             m_size),
                      Qt::AlignCenter,
-                    m_text);
+                    text);
 }
 
 
@@ -164,4 +171,75 @@ QString Tower::nameForType(TowerType type)
     }
 
     return "普通塔";
+}
+int Tower::level() const
+{
+    return m_level;
+}
+
+int Tower::damage() const
+{
+    return m_damage;
+}
+
+int Tower::range() const
+{
+    return m_range;
+}
+
+int Tower::upgradeCost() const
+{
+    return m_cost * m_level;
+}
+
+int Tower::sellValue() const
+{
+    return m_totalCost / 2;
+}
+
+bool Tower::canUpgrade() const
+{
+    return m_level < m_maxLevel;
+}
+
+bool Tower::upgrade()
+{
+    if (!canUpgrade()) {
+        return false;
+    }
+
+    int cost = upgradeCost();
+
+    m_level++;
+    m_totalCost += cost;
+
+    m_damage += 10;
+    m_range += 12;
+
+    if (m_attackInterval > 8) {
+        m_attackInterval -= 3;
+    }
+
+    m_size += 2;
+
+    return true;
+}
+
+bool Tower::containsPoint(const QPointF& pos) const
+{
+    double dx = pos.x() - m_pos.x();
+    double dy = pos.y() - m_pos.y();
+    double distance = qSqrt(dx * dx + dy * dy);
+
+    return distance <= m_size / 2 + 8;
+}
+
+void Tower::setSelected(bool selected)
+{
+    m_selected = selected;
+}
+
+bool Tower::isSelected() const
+{
+    return m_selected;
 }

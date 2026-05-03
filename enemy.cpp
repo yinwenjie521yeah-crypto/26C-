@@ -18,6 +18,7 @@ void Enemy::setupByType(const QString&type)
         m_maxHp=40;
         m_speed=2.4;
         m_reward=10;
+        m_armor = 0;
         m_iconSize=36;
         // 尝试加载敌人图标
         // 现在你还没加资源文件，所以这里大概率加载失败
@@ -35,6 +36,7 @@ void Enemy::setupByType(const QString&type)
         m_speed = 3.6;                  // 速度快
         m_reward = 15;
         m_iconSize = 34;
+        m_armor = 0;
         m_color = QColor(240, 150, 50); // 橙色
 
         m_icon = QPixmap(":/images/enemy_ddl.png")
@@ -44,6 +46,7 @@ void Enemy::setupByType(const QString&type)
                              Qt::SmoothTransformation);
     }
     else if (type == "virus") {
+        m_armor = 8;
         m_displayName = "Virus";        // 厚血怪
         m_hp =130;                      // 血量高
         m_maxHp = 130;
@@ -66,7 +69,7 @@ void Enemy::setupByType(const QString&type)
         m_reward = 100;
         m_iconSize = 60;
         m_color = QColor(70, 70, 70);   // 深灰色
-
+m_armor = 18;
         m_icon = QPixmap(":/images/enemy_boss.png")
                      .scaled(m_iconSize,
                              m_iconSize,
@@ -83,11 +86,13 @@ void Enemy::setupByType(const QString&type)
         m_iconSize = 36;
         m_color = QColor(220, 70, 70);
     }
+    m_baseSpeed = m_speed;
 }
 void Enemy::update(){
     if(m_reachedEnd||isDead()){
         return;
     }
+    updateSpecialAbility();
     if(m_targetIndex>=m_path.size()){
         m_reachedEnd=true;
         return;
@@ -173,12 +178,188 @@ bool Enemy::hasReachedEnd()const{
 QPointF Enemy::position()const{
     return m_pos;
 }
-void Enemy::takeDamage(int damage){
-    m_hp-=damage;
-    if(m_hp<0){
-        m_hp=0;
+void Enemy::takeDamage(int damage)
+{
+    int realDamage = damage - m_armor;   // 护甲抵消伤害
+
+    if (realDamage < 1) {
+        realDamage = 1;                  // 最低造成1点伤害，避免完全打不动
+    }
+
+    m_hp -= realDamage;
+
+    if (m_hp < 0) {
+        m_hp = 0;
     }
 }
 int Enemy::reward()const{
     return m_reward;
+}
+int Enemy::damageToLife() const
+{
+    if (m_type == "virus") {
+        return 2;       // 厚血怪漏掉扣 2 点生命
+    }
+    else if (m_type == "boss") {
+        return 5;       // Boss 漏掉扣 5 点生命
+    }
+    else if (m_type == "mutant") {
+        return 2;       // 变异 Virus 扣 4
+    }
+    return 1;           // Bug 和 DDL 默认扣 1 点生命
+}
+void Enemy::updateSpecialAbility()
+{
+    // DDL 冲刺机制
+    if (m_type == "ddl") {
+        // 如果正在冲刺，倒计时
+        if (m_isDashing) {
+            m_dashCounter--;
+
+            if (m_dashCounter <= 0) {
+                m_isDashing = false;
+                m_speed = m_baseSpeed;      // 冲刺结束，恢复原速度
+            }
+
+            return;
+        }
+
+        // 已经冲刺过，就不再冲刺
+        if (m_hasDashed) {
+            return;
+        }
+
+        // 走到路径中段以后触发冲刺
+        if (m_targetIndex >= m_path.size() / 2) {
+            m_hasDashed = true;
+            m_isDashing = true;
+            m_dashCounter = m_dashDuration;
+
+            m_speed = m_baseSpeed * 1.6;    // 冲刺速度
+        }
+
+        return;
+    }
+
+    // Virus 变异机制
+    if (m_type == "virus") {
+        // 每个 Virus 只变异一次
+        if (m_hasMutated) {
+            return;
+        }
+
+        // 走到路线后半段还没死，就触发变异
+        if (m_targetIndex >= m_path.size() / 2) {
+            mutateVirus();
+        }
+
+        return;
+    }
+}
+void Enemy::mutateVirus()
+{
+    m_hasMutated = true;
+
+    // 类型改成 mutant，后面扣血和显示都可以区分
+    m_type = "mutant";
+    m_displayName = "Mutant";
+
+    // 变异后血量提高
+    m_maxHp = 160;
+
+    m_armor = 12;
+    // 变异后护甲更高
+    // 当前血量增加，但不超过最大血量
+    m_hp += 120;
+    if (m_hp > m_maxHp) {
+        m_hp = m_maxHp;
+    }
+
+    // 变异后速度略微降低，但更难打死
+    m_speed = 1.2;
+    m_baseSpeed = m_speed;
+
+    // 奖励提高
+    m_reward = 60;
+
+    // 体型变大
+    m_iconSize = 54;
+
+    // 没有图片时显示更深的紫色
+    m_color = QColor(80, 40, 150);
+
+    QString iconPath = m_lateGameEnhanced
+                           ? ":/images/enemy_mutant_armored.png"
+                           : ":/images/enemy_mutant.png";
+    m_icon = QPixmap(iconPath)
+                 .scaled(m_iconSize,
+                         m_iconSize,
+                         Qt::KeepAspectRatio,
+                         Qt::SmoothTransformation);
+}
+void Enemy::applyLateGameEnhance()
+{
+    if (m_lateGameEnhanced) {
+        return;
+    }
+
+    m_lateGameEnhanced = true;
+
+    // 第4波后强化：血量提升30%，护甲+3
+    m_maxHp = static_cast<int>(m_maxHp * 1.3);
+    m_hp = static_cast<int>(m_hp * 1.3);
+    m_armor += 3;
+
+    // 颜色变深，没图片时也能看出强化
+    m_color = m_color.darker(130);
+
+    // 给强化敌人预留图片路径
+    QString iconPath;
+
+    if (m_type == "bug") {
+        iconPath = ":/images/enemy_bug_armored.png";
+    }
+    else if (m_type == "ddl") {
+        iconPath = ":/images/enemy_ddl_armored.png";
+    }
+    else if (m_type == "virus") {
+        iconPath = ":/images/enemy_virus_armored.png";
+    }
+    else if (m_type == "mutant") {
+        iconPath = ":/images/enemy_mutant_armored.png";
+    }
+    else if (m_type == "boss") {
+        iconPath = ":/images/enemy_boss_armored.png";
+    }
+
+    if (!iconPath.isEmpty()) {
+        m_icon = QPixmap(iconPath)
+        .scaled(m_iconSize,
+                m_iconSize,
+                Qt::KeepAspectRatio,
+                Qt::SmoothTransformation);
+    }
+}
+
+void Enemy::applyBossAura()
+{
+    if (m_bossAuraApplied) {
+        return;
+    }
+
+    m_bossAuraApplied = true;
+
+    // Boss光环：血量提升50%
+    m_maxHp = static_cast<int>(m_maxHp * 1.5);
+    m_hp = static_cast<int>(m_hp * 1.5);
+}
+
+bool Enemy::isBoss() const
+{
+    return m_type == "boss";
+}
+
+int Enemy::armor() const
+{
+    return m_armor;
 }

@@ -22,9 +22,13 @@ public:
     bool isDead()const;// 判断敌人是否死亡
     bool hasReachedEnd()const;// 判断敌人是否已经到达终点
     QPointF position()const;// 返回敌人当前坐标
+    int damageToLife() const;   // 敌人到达终点时扣多少生命
     void takeDamage(int damage);        // 敌人受到伤害
     int reward()const ;                 // 击败敌人奖励金币
-
+    void applyLateGameEnhance();   // 第4波后敌人强化
+    void applyBossAura();          // Boss光环：血量提升50%
+    bool isBoss() const;           // 判断是否Boss
+    int armor() const;             // 返回护甲值
 private:
     QVector<QPointF> m_path;// 敌人移动路径
     QPointF m_pos;// 敌人当前坐标
@@ -32,6 +36,13 @@ private:
     int m_hp=30;
     int m_maxHp=30;
     double m_speed=1.5;
+    double m_baseSpeed = 1.5;        // 原始速度，用来冲刺结束后恢复
+
+    bool m_hasDashed = false;        // DDL 是否已经冲刺过
+    bool m_isDashing = false;        // DDL 是否正在冲刺
+    int m_dashCounter = 0;           // 冲刺剩余帧数
+    int m_dashDuration = 60;         // 冲刺持续时间，60帧约等于1.8秒
+    bool m_hasMutated = false;      // Virus 是否已经变异过
     int m_reward=10;
     bool m_reachedEnd=false;
     QString m_type;
@@ -41,7 +52,11 @@ private:
     QColor m_color;             // 没有图片时，用不同颜色区分敌人
     //根据敌人类型设置属性
     void setupByType(const QString& type);
-
+    void updateSpecialAbility();     // 更新敌人的特殊能力，比如 DDL 冲刺
+    void mutateVirus();             // Virus 变异成小 Boss
+    int m_armor = 0;                   // 护甲值，减少受到的伤害
+    bool m_lateGameEnhanced = false;   // 是否已经获得第4波强化
+    bool m_bossAuraApplied = false;    // 是否已经获得Boss光环
 };
 
 #endif // ENEMY_H

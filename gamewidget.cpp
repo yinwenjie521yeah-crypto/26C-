@@ -106,16 +106,17 @@ void GameWidget::initSpawnQueue()
     for (int i = 0; i < 6; ++i) {
         wave4.append("bug");
     }
-    for (int i = 0; i <10; ++i) {
+    for (int i = 0; i <6; ++i) {
         wave4.append("virus");
     }
 
     // 第 5 波：混合进攻
     QVector<QString> wave5;
+
     for (int i = 0; i < 10; ++i) {
         wave5.append("ddl");
     }
-    for (int i = 0; i < 10; ++i) {
+    for (int i = 0; i < 5; ++i) {
         wave5.append("virus");
     }
 
@@ -124,10 +125,33 @@ void GameWidget::initSpawnQueue()
     for (int i = 0; i <10; ++i) {
         wave6.append("ddl");
     }
-    for (int i = 0; i < 10; ++i) {
+    for (int i = 0; i <4; ++i) {
         wave6.append("virus");
     }
     wave6.append("boss");
+    for (int i = 0; i < 8; ++i) {
+        wave6.append("ddl");
+    }
+
+    for (int i = 0; i < 4; ++i) {
+        wave6.append("virus");
+    }
+    for (int i = 0; i < 8; ++i) {
+        wave6.append("ddl");
+    }
+
+    for (int i = 0; i < 2; ++i) {
+        wave6.append("virus");
+    }
+    for (int i = 0; i < 8; ++i) {
+        wave6.append("ddl");
+    }
+    for (int i = 0; i < 2; ++i) {
+        wave6.append("virus");
+    }
+    for (int i = 0; i < 12; ++i) {
+        wave6.append("ddl");
+    }
 
     m_waves.append(wave1);
     m_waves.append(wave2);
@@ -156,10 +180,29 @@ void GameWidget::spawnEnemy(const QString& type)
     m_nextPathIndex++;
     // 取出本次敌人要走的路径
     QVector<QPointF> selectedPath = m_paths[pathIndex];
-
-    // 创建敌人，并把选中的路径传给它
     Enemy* enemy = new Enemy(type, selectedPath);
-    m_enemies.append(enemy);                 // 加入敌人数组
+
+    // 第4波开始，新生成敌人获得强化
+    if (m_currentWaveIndex >= 3) {
+        enemy->applyLateGameEnhance();
+    }
+
+    // Boss光环期间，新生成敌人也获得血量+50%
+    if (m_bossAuraActive) {
+        enemy->applyBossAura();
+    }
+
+    m_enemies.append(enemy);
+
+    // Boss第一次出场时，触发全场光环
+    if (type == "boss" && !m_bossAuraTriggered) {
+        m_bossAuraTriggered = true;
+        m_bossAuraActive = true;
+
+        applyBossAuraToAllEnemies();
+
+        showStatusMessage("警报：Boss出现！所有敌人生命提升50%！", 150);
+    }
 }
 
 // 游戏更新函数
@@ -177,33 +220,59 @@ void GameWidget::updateGame()
         if (m_spawnIndexInWave < currentWave.size()) {
             m_spawnCounter++;
 int currentInterval = m_spawnInterval - m_currentWaveIndex * 2;
-            if (currentInterval < 10) {
-                currentInterval = 10;
+            if (currentInterval < 8) {
+                currentInterval = 8;
             }
-            // 到达出怪间隔后，生成一个敌人
-            if (m_spawnCounter >= currentInterval) {
-                int spawnCountThisTime = 1;
+            // 如果当前没有正在进行的小队爆发，就按间隔触发一组小队
+            if (m_burstRemaining <= 0) {
+                if (m_spawnCounter >= currentInterval) {
+                    int spawnCountThisTime = 1;
 
-                // 第 3 波开始，每次出 2 个
-                if (m_currentWaveIndex >= 2) {
-                    spawnCountThisTime = 2;
+                    if (m_currentWaveIndex == 0) {
+                        spawnCountThisTime = 1;   // 第 1 波每组 1 个
+                    }
+                    else if (m_currentWaveIndex == 1) {
+                        spawnCountThisTime = 1;   // 第 2 波每组 1 个
+                    }
+                    else if (m_currentWaveIndex == 2) {
+                        spawnCountThisTime = 2;   // 第 3 波每组 2 个
+                    }
+                    else if (m_currentWaveIndex == 3) {
+                        spawnCountThisTime = 2;   // 第 4 波每组 2 个
+                    }
+                    else if (m_currentWaveIndex == 4) {
+                        spawnCountThisTime = 3;   // 第 5 波每组 3 个
+                    }
+                    else if (m_currentWaveIndex >= 5) {
+                        spawnCountThisTime = 3;   // 第 6 波每组 3 个
+                    }
+
+                    m_burstRemaining = spawnCountThisTime;
+                    m_burstGapCounter = 0;
+                    m_spawnCounter = 0;
+                }
+            }
+            // 如果正在进行小队爆发，就每隔几帧出一个，避免粘在一起
+            else {
+                m_burstGapCounter++;
+
+                if (m_burstGapCounter >= m_burstGap) {
+                    if (m_spawnIndexInWave < currentWave.size()) {
+                        QString enemyType = currentWave[m_spawnIndexInWave];
+
+                        spawnEnemy(enemyType);
+
+                        m_spawnIndexInWave++;
+                        m_spawnedCount++;
+                        m_burstRemaining--;
+                    }
+                    else {
+                        m_burstRemaining = 0;
+                    }
+
+                    m_burstGapCounter = 0;
                 }
 
-                // 第 5 波开始，每次出 3 个
-                if (m_currentWaveIndex >= 4) {
-                    spawnCountThisTime = 3;
-                }
-
-                for (int i = 0; i < spawnCountThisTime && m_spawnIndexInWave < currentWave.size(); ++i) {
-                    QString enemyType = currentWave[m_spawnIndexInWave];
-
-                    spawnEnemy(enemyType);
-
-                    m_spawnIndexInWave++;
-                    m_spawnedCount++;
-                }
-
-                m_spawnCounter = 0;
             }}
 
         // 当前波已经出完，准备进入下一波
@@ -222,6 +291,9 @@ int currentInterval = m_spawnInterval - m_currentWaveIndex * 2;
                     m_spawnIndexInWave = 0;     // 新一波从第 0 个敌人开始
                     m_spawnCounter = 0;
                     m_waveWaitCounter = 0;
+                    if (m_currentWaveIndex == 3) {
+                        showStatusMessage("警报：第4波开始，敌人获得护甲强化！", 150);
+                    }
                 }
             }
         }
@@ -255,7 +327,10 @@ int currentInterval = m_spawnInterval - m_currentWaveIndex * 2;
         Enemy* enemy = m_enemies[i];
 
         if (enemy->hasReachedEnd()) {
-            m_life--;
+          m_life -= enemy->damageToLife();
+            if (enemy->isBoss()) {
+                m_bossAuraActive = false;
+            }
 removeBulletsTargeting(enemy);  // 删除所有瞄准这个敌人的子弹
             delete enemy;
             m_enemies.removeAt(i);
@@ -263,13 +338,23 @@ removeBulletsTargeting(enemy);  // 删除所有瞄准这个敌人的子弹
         }
 
         if (enemy->isDead()) {
+
             m_gold += enemy->reward();
+            if (enemy->isBoss()) {
+                m_bossAuraActive = false;
+                showStatusMessage("Boss已被击败，强化光环消失！", 120);
+            }
+
+            removeBulletsTargeting(enemy);
 removeBulletsTargeting(enemy);  // 删除所有瞄准这个敌人的子弹
             delete enemy;
             m_enemies.removeAt(i);
             continue;
         }
     }
+    if (m_statusMessageCounter > 0) {
+        m_statusMessageCounter--;
+    }//让字幕倒计时
     checkGameResult();    // 检查游戏是否胜利或失败
     update();                         // 通知 Qt 重新绘制窗口，会触发 paintEvent
 }
@@ -307,6 +392,7 @@ void GameWidget::paintEvent(QPaintEvent *event)
 
     // 状态栏最后画，保证在最上层
     drawHud(painter);
+    drawStatusMessage(painter);
 
 }
 
@@ -436,7 +522,7 @@ void GameWidget::drawHud(QPainter& painter)
     font.setBold(true);
     painter.setFont(font);
 
-    QString info = QString("校园保卫战    金币：%1    生命：%2    波次：%3/%4    敌人：%5/%6    当前塔：%7")
+    QString info = QString("校园保卫战    金币：%1    生命：%2    波次：%3/%4    敌人：%5/%6    当前塔：%7    操作：U升级 X出售")
                        .arg(m_gold)
                        .arg(m_life)
                        .arg(m_wave)
@@ -556,7 +642,21 @@ void GameWidget::mousePressEvent(QMouseEvent *event)
 
     // 获取鼠标点击位置
     QPointF clickPos = event->position();
+    // 如果点击的是已有防御塔，就选中它，不建新塔
+    Tower* clickedTower = towerAt(clickPos);
 
+    if (clickedTower != nullptr) {
+        clearSelectedTower();
+
+        m_selectedTower = clickedTower;
+        m_selectedTower->setSelected(true);
+
+        update();
+        return;
+    }
+
+    // 如果点的不是塔，就取消当前选中
+    clearSelectedTower();
     // 把点击位置吸附到网格中心
     QPointF buildPos = snapToGrid(clickPos);
 
@@ -646,4 +746,111 @@ void GameWidget::keyPressEvent(QKeyEvent *event)
         m_selectedTowerType = TowerType::Heavy;
         update();
     }
+    else if (event->key() == Qt::Key_U) {
+        upgradeSelectedTower();
+    }
+    else if (event->key() == Qt::Key_X || event->key() == Qt::Key_Delete) {
+        sellSelectedTower();
+    }
+}
+Tower* GameWidget::towerAt(const QPointF& pos) const
+{
+    for (Tower* tower : m_towers) {
+        if (tower->containsPoint(pos)) {
+            return tower;
+        }
+    }
+
+    return nullptr;
+}
+
+void GameWidget::clearSelectedTower()
+{
+    if (m_selectedTower != nullptr) {
+        m_selectedTower->setSelected(false);
+        m_selectedTower = nullptr;
+    }
+}
+
+void GameWidget::upgradeSelectedTower()
+{
+    if (m_selectedTower == nullptr) {
+        QMessageBox::information(this, "提示", "请先点击选择一座防御塔。");
+        return;
+    }
+
+    if (!m_selectedTower->canUpgrade()) {
+        QMessageBox::information(this, "提示", "这座防御塔已经满级。");
+        return;
+    }
+
+    int cost = m_selectedTower->upgradeCost();
+
+    if (m_gold < cost) {
+        QMessageBox::information(this, "提示", "金币不足，无法升级。");
+        return;
+    }
+
+    m_gold -= cost;
+    m_selectedTower->upgrade();
+
+    update();
+}
+
+void GameWidget::sellSelectedTower()
+{
+    if (m_selectedTower == nullptr) {
+        QMessageBox::information(this, "提示", "请先点击选择一座防御塔。");
+        return;
+    }
+
+    m_gold += m_selectedTower->sellValue();
+
+    for (int i = m_towers.size() - 1; i >= 0; --i) {
+        if (m_towers[i] == m_selectedTower) {
+            delete m_towers[i];
+            m_towers.removeAt(i);
+            break;
+        }
+    }
+
+    m_selectedTower = nullptr;
+
+    update();
+}
+void GameWidget::applyBossAuraToAllEnemies()
+{
+    for (Enemy* enemy : m_enemies) {
+        if (!enemy->isDead() && !enemy->hasReachedEnd()) {
+            enemy->applyBossAura();
+        }
+    }
+}
+
+void GameWidget::showStatusMessage(const QString& text, int frames)
+{
+    m_statusMessage = text;
+    m_statusMessageCounter = frames;
+}
+
+void GameWidget::drawStatusMessage(QPainter& painter)
+{
+    if (m_statusMessageCounter <= 0) {
+        return;
+    }
+
+    QRectF box(width() / 2 - 330, 80, 660, 56);
+
+    painter.setPen(Qt::NoPen);
+    painter.setBrush(QColor(30, 30, 30, 180));
+    painter.drawRoundedRect(box, 12, 12);
+
+    painter.setPen(QColor(255, 230, 120));
+
+    QFont font = painter.font();
+    font.setBold(true);
+    font.setPointSize(18);
+    painter.setFont(font);
+
+    painter.drawText(box, Qt::AlignCenter, m_statusMessage);
 }
