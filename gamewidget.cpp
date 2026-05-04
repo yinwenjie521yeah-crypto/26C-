@@ -12,8 +12,11 @@
 // 当 GameWidget 被创建时，会自动执行这里
 GameWidget::GameWidget(QWidget *parent)
     : QWidget(parent)       { // 调用 QWidget 的构造函数，因为 GameWidget 继承 QWidget
-    setFixedSize(1200, 800);  // 设置游戏窗口大小为 900 × 600
+    setFixedSize(1200, 800);  // 设置游戏窗口大小
 setFocusPolicy(Qt::StrongFocus);
+    m_gameMapBackground = QPixmap(":/images/images/game_map.jpg");
+m_winImage = QPixmap(":/images/images/win.png");
+m_loseImage = QPixmap(":/images/images/lose.png");
     initPaths();              // 初始化敌人移动路径
 initSpawnQueue();        // 初始化这一关的出怪顺序
     m_timer = new QTimer(this);  // 创建定时器，this 表示这个定时器属于 GameWidget
@@ -42,33 +45,30 @@ GameWidget::~GameWidget()
 // 初始化敌人移动路径
 void GameWidget::initPaths()
 {
-    m_paths.clear();          // 先清空路径，避免重复添加
+    m_paths.clear();
 
-    // 下面这些点组成一条路线
-    // 敌人会按照顺序：点1 -> 点2 -> 点3 -> ... -> 终点 移动
-    // 第一条路径：中间路线
+    // 上方路线
     QVector<QPointF> path1;
 
-    path1 << QPointF(40, 230)     // 起点 1
-          << QPointF(260, 230)
-          << QPointF(260, 110)
-          << QPointF(620, 110)
-          << QPointF(620, 340)
-          << QPointF(1040, 340);   // 终点
+    path1 << QPointF(40, 230)
+          << QPointF(305, 230)
+          << QPointF(305, 90)
+          << QPointF(635, 90)
+          << QPointF(635, 315)
+          << QPointF(1050, 315);
 
-    // 第二条路径：上方绕路
+    // 下方路线
     QVector<QPointF> path2;
 
-    path2 << QPointF(40,590)     // 起点 2
-          << QPointF(320, 590)
-          << QPointF(320, 720)
-          << QPointF(780, 720)
-          << QPointF(520, 420)
-          << QPointF(780, 500)
-          << QPointF(1040, 500)
-          << QPointF(1040, 340);   // 和第一条路共用终点
+    path2 << QPointF(40, 570)
+          << QPointF(335, 570)
+          << QPointF(335, 690)
+          << QPointF(760, 690)
+          << QPointF(525, 395)
+          << QPointF(745, 485)
+          << QPointF(1050, 485)
+          << QPointF(1050, 315);
 
-    // 把两条路径加入总路径数组
     m_paths.append(path1);
     m_paths.append(path2);
 }
@@ -106,7 +106,7 @@ void GameWidget::initSpawnQueue()
     for (int i = 0; i < 6; ++i) {
         wave4.append("bug");
     }
-    for (int i = 0; i <6; ++i) {
+    for (int i = 0; i <4; ++i) {
         wave4.append("virus");
     }
 
@@ -116,29 +116,19 @@ void GameWidget::initSpawnQueue()
     for (int i = 0; i < 10; ++i) {
         wave5.append("ddl");
     }
-    for (int i = 0; i < 5; ++i) {
+    for (int i = 0; i <4; ++i) {
         wave5.append("virus");
     }
 
     // 第 6 波：最终 Boss 波
     QVector<QString> wave6;
-    for (int i = 0; i <10; ++i) {
+    for (int i = 0; i <4; ++i) {
         wave6.append("ddl");
     }
-    for (int i = 0; i <4; ++i) {
+    for (int i = 0; i <3; ++i) {
         wave6.append("virus");
     }
     wave6.append("boss");
-    for (int i = 0; i < 8; ++i) {
-        wave6.append("ddl");
-    }
-
-    for (int i = 0; i < 4; ++i) {
-        wave6.append("virus");
-    }
-    for (int i = 0; i < 8; ++i) {
-        wave6.append("ddl");
-    }
 
     for (int i = 0; i < 2; ++i) {
         wave6.append("virus");
@@ -146,12 +136,10 @@ void GameWidget::initSpawnQueue()
     for (int i = 0; i < 8; ++i) {
         wave6.append("ddl");
     }
-    for (int i = 0; i < 2; ++i) {
-        wave6.append("virus");
-    }
-    for (int i = 0; i < 12; ++i) {
+    for (int i = 0; i < 8; ++i) {
         wave6.append("ddl");
     }
+
 
     m_waves.append(wave1);
     m_waves.append(wave2);
@@ -294,6 +282,10 @@ int currentInterval = m_spawnInterval - m_currentWaveIndex * 2;
                     if (m_currentWaveIndex == 3) {
                         showStatusMessage("警报：第4波开始，敌人获得护甲强化！", 150);
                     }
+                    if (m_currentWaveIndex == 5) {
+                        showStatusMessage("最终波开始！Boss 即将出现！", 150);
+                        emit finalWaveStarted();
+                    }
                 }
             }
         }
@@ -371,9 +363,13 @@ void GameWidget::paintEvent(QPaintEvent *event)
     // 开启抗锯齿，让圆形和线条更平滑
     painter.setRenderHint(QPainter::Antialiasing, true);
 
-    drawBackground(painter);           // 画背景
-    drawGrid(painter);                 // 画网格
-    drawPath(painter);                 // 画道路
+    drawBackground(painter);           // 画地图图片背景
+
+    if (m_debugDrawPath) {
+        drawGrid(painter);
+        drawPath(painter);
+    }
+    drawMapMarkers(painter);
 
     // 先画塔
     for (Tower* tower : m_towers) {
@@ -393,15 +389,31 @@ void GameWidget::paintEvent(QPaintEvent *event)
     // 状态栏最后画，保证在最上层
     drawHud(painter);
     drawStatusMessage(painter);
+    if (m_gameFinished) {
+        drawGameResultScreen(painter);
+    }
 
 }
 
 
-// 画背景
 void GameWidget::drawBackground(QPainter& painter)
 {
-    // 用浅绿色填充整个窗口
-    painter.fillRect(rect(), QColor(235, 242, 235));
+    if (!m_gameMapBackground.isNull()) {
+        painter.drawPixmap(rect(), m_gameMapBackground);
+    }
+    else {
+        painter.fillRect(rect(), QColor(70, 110, 70));
+
+        painter.setPen(Qt::white);
+        QFont font = painter.font();
+        font.setPointSize(24);
+        font.setBold(true);
+        painter.setFont(font);
+
+        painter.drawText(rect(),
+                         Qt::AlignCenter,
+                         "游戏地图图片加载失败\n请检查 images/game_map.jpg");
+    }
 }
 
 
@@ -508,21 +520,27 @@ painter.setBrush(Qt::NoBrush);
 // 画顶部状态栏
 void GameWidget::drawHud(QPainter& painter)
 {
-    // 画顶部深色矩形背景
+    // 半透明圆角背景，不再整条盖住地图
+    QRectF hudRect(20, 12, width() - 40, 48);
+
     painter.setPen(Qt::NoPen);
-    painter.setBrush(QColor(45, 52, 65));
-    painter.drawRect(0, 0, width(), 60);
+    painter.setBrush(QColor(35, 65, 38, 190));
+    painter.drawRoundedRect(hudRect, 18, 18);
 
-    // 设置文字颜色
-    painter.setPen(Qt::white);
+    // 细边框
+    painter.setPen(QPen(QColor(210, 230, 160, 180), 2));
+    painter.setBrush(Qt::NoBrush);
+    painter.drawRoundedRect(hudRect, 18, 18);
 
-    // 设置字体
+    // 文字样式
     QFont font = painter.font();
     font.setPointSize(12);
     font.setBold(true);
     painter.setFont(font);
 
-    QString info = QString("校园保卫战    金币：%1    生命：%2    波次：%3/%4    敌人：%5/%6    当前塔：%7    操作：U升级 X出售")
+    painter.setPen(QColor(255, 250, 220));
+
+    QString info = QString("金币：%1    生命：%2    波次：%3/%4    敌人：%5/%6    当前塔：%7    操作：1普通塔  2速射塔  3重炮塔  U升级  X出售")
                        .arg(m_gold)
                        .arg(m_life)
                        .arg(m_wave)
@@ -531,8 +549,9 @@ void GameWidget::drawHud(QPainter& painter)
                        .arg(m_totalEnemies)
                        .arg(Tower::nameForType(m_selectedTowerType));
 
-    // 在状态栏上画文字
-    painter.drawText(20, 38, info);
+    painter.drawText(QRectF(40, 12, width() - 80, 48),
+                     Qt::AlignVCenter | Qt::AlignLeft,
+                     info);
 }
 // 把鼠标点击位置吸附到网格中心
 QPointF GameWidget::snapToGrid(const QPointF& pos) const
@@ -635,13 +654,29 @@ bool GameWidget::canBuildTowerAt(const QPointF& pos) const
 void GameWidget::mousePressEvent(QMouseEvent *event)
 {
     setFocus();
-    // 只处理鼠标左键
+
     if (event->button() != Qt::LeftButton) {
         return;
     }
 
-    // 获取鼠标点击位置
     QPointF clickPos = event->position();
+
+    // 游戏结束后，只处理结果界面的两个按钮
+    if (m_gameFinished) {
+        QPoint clickPoint = clickPos.toPoint();
+
+        if (resultRetryRect().contains(clickPoint)) {
+            restartGame();
+            return;
+        }
+
+        if (resultMenuRect().contains(clickPoint)) {
+            emit backToMenuRequested();
+            return;
+        }
+
+        return;
+    }
     // 如果点击的是已有防御塔，就选中它，不建新塔
     Tower* clickedTower = towerAt(clickPos);
 
@@ -688,38 +723,33 @@ void GameWidget::mousePressEvent(QMouseEvent *event)
 }
 void GameWidget::checkGameResult()
 {
-    // 如果游戏已经结束，就不重复判断
     if (m_gameFinished) {
         return;
     }
 
     // 失败条件：生命值小于等于 0
     if (m_life <= 0) {
-        m_gameFinished = true;       // 标记游戏已经结束
+        m_gameFinished = true;
+        m_gameWon = false;
 
         if (m_timer) {
-            m_timer->stop();         // 停止游戏计时器
+            m_timer->stop();
         }
 
-        QMessageBox::information(this,
-                                 "游戏失败",
-                                 "教学楼失守了！请重新开始挑战。");
+        update();
         return;
     }
 
-    // 胜利条件：
-    // 1. 所有敌人都已经生成完
-    // 2. 地图上已经没有敌人
+    // 胜利条件：所有敌人生成完，并且地图上没有敌人
     if (m_spawnedCount >= m_totalEnemies && m_enemies.isEmpty()) {
-        m_gameFinished = true;       // 标记游戏已经结束
+        m_gameFinished = true;
+        m_gameWon = true;
 
         if (m_timer) {
-            m_timer->stop();         // 停止游戏计时器
+            m_timer->stop();
         }
 
-        QMessageBox::information(this,
-                                 "游戏胜利",
-                                 "恭喜你成功保卫了校园！");
+        update();
         return;
     }
 }
@@ -853,4 +883,154 @@ void GameWidget::drawStatusMessage(QPainter& painter)
     painter.setFont(font);
 
     painter.drawText(box, Qt::AlignCenter, m_statusMessage);
+}
+void GameWidget::drawGameResultScreen(QPainter& painter)
+{
+    QPixmap resultImage = m_gameWon ? m_winImage : m_loseImage;
+
+    if (!resultImage.isNull()) {
+        // 直接把整张胜利/失败图铺满 1200×800
+        painter.drawPixmap(rect(), resultImage);
+        return;
+    }
+
+    // 如果图片加载失败，显示备用文字
+    painter.fillRect(rect(), QColor(40, 80, 45));
+
+    painter.setPen(Qt::white);
+
+    QFont font = painter.font();
+    font.setBold(true);
+    font.setPointSize(36);
+    painter.setFont(font);
+
+    QString text = m_gameWon ? "游戏胜利！" : "游戏失败！";
+    painter.drawText(rect(), Qt::AlignCenter, text);
+}
+
+QRect GameWidget::resultRetryRect() const
+{
+    if (m_gameWon) {
+        // 胜利图里的“重新挑战”按钮
+        return QRect(280, 465, 300, 95);
+    }
+
+    // 失败图里的“重新挑战”按钮
+    return QRect(280, 565, 300, 95);
+}
+
+QRect GameWidget::resultMenuRect() const
+{
+    if (m_gameWon) {
+        // 胜利图里的“返回主页”按钮
+        return QRect(600, 465, 300, 95);
+    }
+
+    // 失败图里的“返回主页”按钮
+    return QRect(600, 565, 300, 95);
+}
+
+void GameWidget::restartGame()
+{
+    if (m_timer) {
+        m_timer->stop();
+    }
+
+    qDeleteAll(m_enemies);
+    m_enemies.clear();
+
+    qDeleteAll(m_towers);
+    m_towers.clear();
+
+    qDeleteAll(m_bullets);
+    m_bullets.clear();
+
+    m_selectedTower = nullptr;
+
+    m_gold = 150;
+    m_life = 10;
+    m_wave = 1;
+
+    m_spawnCounter = 0;
+    m_spawnedCount = 0;
+    m_totalEnemies = 0;
+
+    m_gameFinished = false;
+    m_gameWon = false;
+
+    m_bossAuraActive = false;
+    m_bossAuraTriggered = false;
+
+    m_statusMessage.clear();
+    m_statusMessageCounter = 0;
+
+    m_currentWaveIndex = 0;
+    m_spawnIndexInWave = 0;
+    m_nextPathIndex = 0;
+
+    m_waveWaitCounter = 0;
+
+    m_burstRemaining = 0;
+    m_burstGapCounter = 0;
+
+    m_selectedTowerType = TowerType::Normal;
+
+    initPaths();
+    initSpawnQueue();
+
+    if (m_timer) {
+        m_timer->start(30);
+    }
+
+    setFocus();
+    update();
+}
+void GameWidget::drawMapMarkers(QPainter& painter)
+{
+    if (m_paths.isEmpty()) {
+        return;
+    }
+
+    QFont font = painter.font();
+    font.setBold(true);
+    font.setPointSize(14);
+    painter.setFont(font);
+
+    // 画两个起点
+    for (int i = 0; i < m_paths.size(); ++i) {
+        if (m_paths[i].isEmpty()) {
+            continue;
+        }
+
+        QPointF startPoint = m_paths[i].first();
+
+        painter.setPen(QPen(QColor(40, 90, 45), 3));
+        painter.setBrush(QColor(90, 190, 95, 230));
+        painter.drawEllipse(startPoint, 22, 22);
+
+        painter.setPen(Qt::white);
+        QString text = QString("S%1").arg(i + 1);
+
+        painter.drawText(QRectF(startPoint.x() - 24,
+                                startPoint.y() - 12,
+                                48,
+                                24),
+                         Qt::AlignCenter,
+                         text);
+    }
+
+    // 画终点
+    QPointF endPoint = m_paths.first().last();
+
+    painter.setPen(QPen(QColor(120, 45, 45), 3));
+    painter.setBrush(QColor(210, 80, 85, 230));
+    painter.drawEllipse(endPoint, 22, 22);
+
+    painter.setPen(Qt::white);
+    painter.drawText(QRectF(endPoint.x() - 24,
+                            endPoint.y() - 12,
+                            48,
+                            24),
+                     Qt::AlignCenter,
+                     "E");
 }

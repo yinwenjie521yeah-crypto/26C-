@@ -5,6 +5,7 @@
 #include <QVector>
 #include <QPointF>
 #include <QPainter>
+#include <QPixmap>
 #include "enemy.h"
 #include <QMouseEvent>   // 鼠标事件
 #include "tower.h"       // 引入防御塔类
@@ -16,7 +17,10 @@ class GameWidget:public QWidget
 public:
     explicit GameWidget(QWidget *parent = nullptr);   // 构造函数
     ~GameWidget();                                    // 析构函数
-
+void restartGame();   // 重新开始游戏
+signals:
+    void finalWaveStarted();
+    void backToMenuRequested();   // 请求返回主菜单
 protected:
     void paintEvent(QPaintEvent *event) override;     // 绘图函数
     void mousePressEvent(QMouseEvent *event) override;  // 鼠标点击事件
@@ -29,6 +33,8 @@ private:
 
    QVector<QVector<QPointF>> m_paths; // 多条敌人路线
     QVector<Enemy*> m_enemies;        // 敌人数组
+   QPixmap m_gameMapBackground;     // 主游戏地图背景图
+   bool m_debugDrawPath =false;    // 调试用：是否显示原来的代码路径
 
     int m_gold = 150;                 // 金币
     int m_life = 10;                  // 生命
@@ -40,6 +46,9 @@ private:
    QVector<QVector<QString>> m_waves;  // 多波敌人，每一波是一个 QString 队列
    QVector<Bullet*> m_bullets;      // 当前地图上的所有子弹
     bool m_gameFinished = false;     // 游戏是否已经结束
+   bool m_gameWon = false;       // true 表示胜利，false 表示失败
+   QPixmap m_winImage;           // 胜利界面图片
+   QPixmap m_loseImage;          // 失败界面图片
    bool m_bossAuraActive = false;       // Boss是否正在强化全场敌人
    bool m_bossAuraTriggered = false;    // Boss光环是否已经触发过
 
@@ -62,6 +71,7 @@ private:
     void drawGrid(QPainter& painter);        // 画网格
     void drawPath(QPainter& painter);        // 画道路
     void drawHud(QPainter& painter);         // 画状态栏
+    void drawMapMarkers(QPainter& painter);   // 绘制起点和终点标记
     QPointF snapToGrid(const QPointF& pos) const;       // 把点击位置吸附到格子中心
     bool canBuildTowerAt(const QPointF& pos) const;     // 判断这个位置能不能建塔
     void checkGameResult();           // 检查胜利或失败
@@ -76,6 +86,10 @@ private:
     void applyBossAuraToAllEnemies();          // 给当前场上敌人加Boss光环
     void showStatusMessage(const QString& text, int frames = 120); // 显示字幕
     void drawStatusMessage(QPainter& painter); // 绘制字幕
+
+    void drawGameResultScreen(QPainter& painter);  // 绘制胜利/失败整屏图片
+    QRect resultRetryRect() const;                 // 重新挑战按钮范围
+    QRect resultMenuRect() const;                  // 返回主页按钮范围
 };
 
 #endif // GAMEWIDGET_H

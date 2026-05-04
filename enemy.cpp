@@ -19,11 +19,11 @@ void Enemy::setupByType(const QString&type)
         m_speed=2.4;
         m_reward=10;
         m_armor = 0;
-        m_iconSize=36;
+        m_iconSize=65;
         // 尝试加载敌人图标
         // 现在你还没加资源文件，所以这里大概率加载失败
         // 但没关系，后面的 draw 函数会自动画红色圆形代替
-        m_icon = QPixmap(":/images/enemy_bug.png")
+        m_icon = QPixmap(":/images/images/enemy_bug.png")
                      .scaled(m_iconSize,
                              m_iconSize,
                              Qt::KeepAspectRatio,
@@ -35,11 +35,11 @@ void Enemy::setupByType(const QString&type)
         m_maxHp = 28;
         m_speed = 3.6;                  // 速度快
         m_reward = 15;
-        m_iconSize = 34;
+        m_iconSize = 65;
         m_armor = 0;
         m_color = QColor(240, 150, 50); // 橙色
 
-        m_icon = QPixmap(":/images/enemy_ddl.png")
+        m_icon = QPixmap(":/images/images/enemy.ddl.gif")
                      .scaled(m_iconSize,
                              m_iconSize,
                              Qt::KeepAspectRatio,
@@ -52,10 +52,10 @@ void Enemy::setupByType(const QString&type)
         m_maxHp = 130;
         m_speed = 2.0;                  // 速度慢
         m_reward = 25;
-        m_iconSize = 42;
+        m_iconSize = 65;
         m_color = QColor(130, 80, 200); // 紫色
 
-        m_icon = QPixmap(":/images/enemy_virus.png")
+        m_icon = QPixmap(":/images/images/enemy_virus.png")
                      .scaled(m_iconSize,
                              m_iconSize,
                              Qt::KeepAspectRatio,
@@ -67,10 +67,10 @@ void Enemy::setupByType(const QString&type)
         m_maxHp = 550;
         m_speed = 1.35;                  // 慢速推进
         m_reward = 100;
-        m_iconSize = 60;
+        m_iconSize = 75;
         m_color = QColor(70, 70, 70);   // 深灰色
 m_armor = 18;
-        m_icon = QPixmap(":/images/enemy_boss.png")
+        m_icon = QPixmap(":/images/images/enemy_boss.png")
                      .scaled(m_iconSize,
                              m_iconSize,
                              Qt::KeepAspectRatio,
@@ -83,7 +83,7 @@ m_armor = 18;
         m_maxHp = 30;
         m_speed = 2.2;
         m_reward = 10;
-        m_iconSize = 36;
+        m_iconSize =65;
         m_color = QColor(220, 70, 70);
     }
     m_baseSpeed = m_speed;
@@ -283,14 +283,14 @@ void Enemy::mutateVirus()
     m_reward = 60;
 
     // 体型变大
-    m_iconSize = 54;
+    m_iconSize =65;
 
     // 没有图片时显示更深的紫色
     m_color = QColor(80, 40, 150);
 
     QString iconPath = m_lateGameEnhanced
-                           ? ":/images/enemy_mutant_armored.png"
-                           : ":/images/enemy_mutant.png";
+                           ? ":/images/images/enemy_mutant.png"
+                           : ":/images/images/enemy_mutant.png";
     m_icon = QPixmap(iconPath)
                  .scaled(m_iconSize,
                          m_iconSize,
@@ -317,19 +317,19 @@ void Enemy::applyLateGameEnhance()
     QString iconPath;
 
     if (m_type == "bug") {
-        iconPath = ":/images/enemy_bug_armored.png";
+        iconPath = ":/images/images/enemy_bug.png";
     }
     else if (m_type == "ddl") {
-        iconPath = ":/images/enemy_ddl_armored.png";
+        iconPath = ":/images/images/enemy.ddl.gif";
     }
     else if (m_type == "virus") {
-        iconPath = ":/images/enemy_virus_armored.png";
+        iconPath = ":/images/images/enemy_virus.png";
     }
     else if (m_type == "mutant") {
-        iconPath = ":/images/enemy_mutant_armored.png";
+        iconPath = ":/images/images/enemy_mutant.png";
     }
     else if (m_type == "boss") {
-        iconPath = ":/images/enemy_boss_armored.png";
+        iconPath = ":/images/images/enemy_boss.png";
     }
 
     if (!iconPath.isEmpty()) {
