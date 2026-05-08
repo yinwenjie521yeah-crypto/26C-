@@ -63,10 +63,8 @@ void Bullet::draw(QPainter& painter) const
     if (m_finished) {
         return;
     }
-
     painter.setPen(Qt::NoPen);
     painter.setBrush(QColor(255, 220, 80));  // 黄色子弹
-
     painter.drawEllipse(m_pos, m_size, m_size);
 }
 

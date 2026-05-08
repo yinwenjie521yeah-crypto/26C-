@@ -21,8 +21,7 @@ void Enemy::setupByType(const QString&type)
         m_armor = 0;
         m_iconSize=65;
         // 尝试加载敌人图标
-        // 现在你还没加资源文件，所以这里大概率加载失败
-        // 但没关系，后面的 draw 函数会自动画红色圆形代替
+        // 无图标 draw 函数会自动画红色圆形代替
         m_icon = QPixmap(":/images/images/enemy_bug.png")
                      .scaled(m_iconSize,
                              m_iconSize,
@@ -130,7 +129,7 @@ void Enemy::draw(QPainter&painter)const{
             m_iconSize,                          // 图片宽度
             m_iconSize,                          // 图片高度
             m_icon                               // 图片对象
-                           );}
+            );}
     // 如果图片没加载成功，就画一个红色圆形代替
     else {
         painter.setPen(Qt::NoPen);               // 不画边框
@@ -168,16 +167,16 @@ void Enemy::draw(QPainter&painter)const{
     int currentWidth = barWidth * m_hp / m_maxHp;
 
     painter.drawRect(barX, barY, currentWidth, barHeight);
-}
-bool Enemy::isDead()const{
+          }
+    bool Enemy::isDead()const{
     return m_hp<=0;
-}
-bool Enemy::hasReachedEnd()const{
+    }
+    bool Enemy::hasReachedEnd()const{
     return m_reachedEnd;
-}
-QPointF Enemy::position()const{
+    }
+    QPointF Enemy::position()const{
     return m_pos;
-}
+    }
 void Enemy::takeDamage(int damage)
 {
     int realDamage = damage - m_armor;   // 护甲抵消伤害
@@ -204,7 +203,7 @@ int Enemy::damageToLife() const
         return 5;       // Boss 漏掉扣 5 点生命
     }
     else if (m_type == "mutant") {
-        return 2;       // 变异 Virus 扣 4
+        return 2;       // 变异 Virus 扣 2
     }
     return 1;           // Bug 和 DDL 默认扣 1 点生命
 }
@@ -348,7 +347,6 @@ void Enemy::applyBossAura()
     }
 
     m_bossAuraApplied = true;
-
     // Boss光环：血量提升50%
     m_maxHp = static_cast<int>(m_maxHp * 1.5);
     m_hp = static_cast<int>(m_hp * 1.5);

@@ -7,8 +7,8 @@
 #include <QPainter>
 #include <QPixmap>
 #include "enemy.h"
-#include <QMouseEvent>   // 鼠标事件
-#include "tower.h"       // 引入防御塔类
+#include <QMouseEvent>
+#include "tower.h"
 #include <QString>
 #include "bullet.h"
 #include <QKeyEvent>
@@ -59,7 +59,7 @@ private:
    int m_spawnInterval = 14;       // 出怪间隔，数值越小，出怪越快
 int m_nextPathIndex = 0;        // 下一个敌人从哪条路出来
    int m_waveWaitCounter = 0;      // 波次间隔计数器
-   int m_waveWaitTime =20;        // 每波之间等待 120 帧
+   int m_waveWaitTime =20;        // 每波之间等待 20 帧
     QVector<Tower*> m_towers;        // 当前地图上的所有防御塔
    Tower* m_selectedTower = nullptr;   // 当前选中的防御塔
    TowerType m_selectedTowerType = TowerType::Normal;

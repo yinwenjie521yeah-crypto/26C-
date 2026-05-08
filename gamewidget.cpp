@@ -1,5 +1,4 @@
 #include "gamewidget.h"      // 引入 GameWidget 的头文件
-
 #include <QPainter>          // QPainter 用来绘图
 #include <QPen>              // QPen 用来设置线条颜色和粗细
 #include <QBrush>            // QBrush 用来设置填充颜色
@@ -13,18 +12,16 @@
 GameWidget::GameWidget(QWidget *parent)
     : QWidget(parent)       { // 调用 QWidget 的构造函数，因为 GameWidget 继承 QWidget
     setFixedSize(1200, 800);  // 设置游戏窗口大小
-setFocusPolicy(Qt::StrongFocus);
+    setFocusPolicy(Qt::StrongFocus);
     m_gameMapBackground = QPixmap(":/images/images/game_map.jpg");
-m_winImage = QPixmap(":/images/images/win.png");
-m_loseImage = QPixmap(":/images/images/lose.png");
+    m_winImage = QPixmap(":/images/images/win.png");
+    m_loseImage = QPixmap(":/images/images/lose.png");
     initPaths();              // 初始化敌人移动路径
-initSpawnQueue();        // 初始化这一关的出怪顺序
+    initSpawnQueue();        // 初始化这一关的出怪顺序
     m_timer = new QTimer(this);  // 创建定时器，this 表示这个定时器属于 GameWidget
-
     // connect 是 Qt 的信号槽机制
     // 意思是：每当 m_timer 触发 timeout 信号，就调用 updateGame 函数
     connect(m_timer, &QTimer::timeout, this, &GameWidget::updateGame);
-
     m_timer->start(30);      // 每 30 毫秒触发一次，相当于游戏每 30ms 更新一帧
 }
 
@@ -78,7 +75,7 @@ void GameWidget::initSpawnQueue()
     m_waves.clear();          // 清空原来的波次
     m_totalEnemies = 0;       // 总敌人数清零
 
-    // 第 1 波：教学波，普通 Bug
+    // 第 1 波：普通 Bug
     QVector<QString> wave1;
     for (int i = 0; i <8; ++i) {
         wave1.append("bug");
@@ -207,7 +204,7 @@ void GameWidget::updateGame()
         // 当前波还没出完
         if (m_spawnIndexInWave < currentWave.size()) {
             m_spawnCounter++;
-int currentInterval = m_spawnInterval - m_currentWaveIndex * 2;
+            int currentInterval = m_spawnInterval - m_currentWaveIndex * 2;
             if (currentInterval < 8) {
                 currentInterval = 8;
             }
@@ -265,8 +262,6 @@ int currentInterval = m_spawnInterval - m_currentWaveIndex * 2;
 
         // 当前波已经出完，准备进入下一波
         else {
-            // 关键改动：
-            // 必须等当前地图上的敌人全部被清掉，才进入下一波
             if (m_enemies.size() <= 6) {
             // 如果不是最后一波，就等待一小段时间后进入下一波
             if (m_currentWaveIndex < m_waves.size() - 1) {
@@ -323,7 +318,7 @@ int currentInterval = m_spawnInterval - m_currentWaveIndex * 2;
             if (enemy->isBoss()) {
                 m_bossAuraActive = false;
             }
-removeBulletsTargeting(enemy);  // 删除所有瞄准这个敌人的子弹
+            removeBulletsTargeting(enemy);  // 删除所有瞄准这个敌人的子弹
             delete enemy;
             m_enemies.removeAt(i);
             continue;
@@ -338,7 +333,7 @@ removeBulletsTargeting(enemy);  // 删除所有瞄准这个敌人的子弹
             }
 
             removeBulletsTargeting(enemy);
-removeBulletsTargeting(enemy);  // 删除所有瞄准这个敌人的子弹
+            removeBulletsTargeting(enemy);  // 删除所有瞄准这个敌人的子弹
             delete enemy;
             m_enemies.removeAt(i);
             continue;
@@ -456,7 +451,7 @@ void GameWidget::drawPath(QPainter& painter)
     for (int i = 1; i < pathPoints.size(); ++i) {
         path.lineTo(pathPoints[i]);
     }
-painter.setBrush(Qt::NoBrush);
+    painter.setBrush(Qt::NoBrush);
     // 先画道路外边框，颜色深一点，线条粗一点
     painter.setPen(QPen(QColor(130, 105, 70),
                         42,
@@ -464,7 +459,7 @@ painter.setBrush(Qt::NoBrush);
                         Qt::RoundCap,
                         Qt::RoundJoin));
     painter.drawPath(path);
-painter.setBrush(Qt::NoBrush);
+    painter.setBrush(Qt::NoBrush);
     // 再画道路主体，颜色浅一点，线条稍微细一点
     painter.setPen(QPen(QColor(210, 180, 120),
                         34,
@@ -622,7 +617,7 @@ bool GameWidget::canBuildTowerAt(const QPointF& pos) const
 
     // 不能建在道路附近
     // 道路主体宽度大约 34，外边框 42
-    // 这里用 55 做安全距离
+    // 这里用 45 做安全距离
     // 不能建在任何一条道路附近
         for (const QVector<QPointF>& path : m_paths) {
         for (int i = 0; i < path.size() - 1; ++i) {

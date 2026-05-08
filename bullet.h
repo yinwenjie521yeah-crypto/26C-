@@ -26,14 +26,14 @@ public:
     Enemy* target() const;
 
 private:
-    QPointF m_pos;          // 子弹当前位置
-    Enemy* m_target;        // 子弹目标敌人
+    QPointF m_pos;
+    Enemy* m_target;
 
-    int m_damage;           // 子弹伤害
-    double m_speed = 8.0;   // 子弹飞行速度
+    int m_damage;
+    double m_speed = 8.0;
 
-    bool m_finished = false; // 子弹是否已经结束
-    int m_size = 8;          // 子弹大小
+    bool m_finished = false;
+    int m_size = 8;
 };
 
 #endif // BULLET_H
