@@ -15,8 +15,13 @@
 - 胜利 / 失败界面
 - 背景音乐与音效
 ---
+##直接运行版本
+可以直接下载 Release 中的：
+`final_release_windows.zip`试玩，不需要配置环境，但需要下载完整压缩包
+解压后双击 `final.exe` 运行。
+
 ## 运行环境要求
-请使用以下环境打开和运行本项目：
+若下载本文件，请使用以下环境打开和运行本项目：
 ### 必需环境（注意路径必须为英文）
 - Qt 6.x
 - Qt Creator
@@ -32,11 +37,4 @@ Qt Creator
 Desktop Qt 6.10.2 MinGW 64-bit
 CMake
 Windows 11
-
-##直接运行版本
-
-可以直接下载 Release 中的：
-
-`final_release_windows.zip`试玩，不需要配置环境
-
-解压后双击 `final.exe` 运行。
+```
