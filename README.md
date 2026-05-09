@@ -32,3 +32,10 @@ Qt Creator
 Desktop Qt 6.10.2 MinGW 64-bit
 CMake
 Windows 11
+## 直接运行版本
+
+可以直接下载 Release 中的：
+
+`final_release_windows.zip`试玩，不需要配置环境
+
+解压后双击 `final.exe` 运行。
